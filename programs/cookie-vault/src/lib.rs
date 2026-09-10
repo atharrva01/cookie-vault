@@ -42,4 +42,12 @@ pub mod cookie_vault {
             milestone_amounts,
         )
     }
+
+    /// Claims released funds. `milestone_index` is required for
+    /// `ConditionType::Milestone` vaults (added in a later phase) and must be
+    /// left unset for `ConditionType::TimeLock`, which releases everything
+    /// at once, once, after `unlock_timestamp`.
+    pub fn claim(ctx: Context<Claim>, milestone_index: Option<u8>) -> Result<()> {
+        instructions::claim::handle_claim(ctx, milestone_index)
+    }
 }
