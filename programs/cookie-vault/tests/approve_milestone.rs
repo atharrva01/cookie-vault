@@ -190,3 +190,18 @@ fn approve_out_of_range_milestone_index_fails() {
     let result = submit(&mut f.svm, &f.depositor, &[approve], &[]);
     assert_error(result, cookie_vault::CookieVaultError::InvalidCondition);
 }
+
+#[test]
+fn approve_milestone_wrong_signer_fails() {
+    let mut f = setup(ONE_TOKEN);
+    let (vault, _vault_ata) = setup_milestone_vault(&mut f);
+
+    // Not the depositor, not in `vault.approvers` — a bystander with no
+    // claim on this vault at all.
+    let impostor = solana_keypair::Keypair::new();
+    f.svm.airdrop(&impostor.pubkey(), 1_000_000_000).unwrap();
+
+    let approve = approve_milestone_ix(&impostor.pubkey(), &vault, 0);
+    let result = submit(&mut f.svm, &impostor, &[approve], &[]);
+    assert_error(result, cookie_vault::CookieVaultError::Unauthorized);
+}

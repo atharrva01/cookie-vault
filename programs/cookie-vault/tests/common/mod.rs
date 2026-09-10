@@ -96,6 +96,18 @@ pub fn create_mint(svm: &mut LiteSVM, payer: &Keypair, decimals: u8) -> Pubkey {
     mint_kp.pubkey()
 }
 
+/// Creates `payer`'s own ATA for `mint` with no balance — unlike
+/// `create_ata_with_balance`, this doesn't mint, so it works for a keypair
+/// that isn't the mint's authority.
+pub fn create_ata(svm: &mut LiteSVM, payer: &Keypair, mint: &Pubkey) -> Pubkey {
+    let ata =
+        get_associated_token_address_with_program_id(&payer.pubkey(), mint, &TOKEN_PROGRAM_ID);
+    let ix =
+        create_associated_token_account(&payer.pubkey(), &payer.pubkey(), mint, &TOKEN_PROGRAM_ID);
+    submit(svm, payer, &[ix], &[]).unwrap();
+    ata
+}
+
 pub fn create_ata_with_balance(
     svm: &mut LiteSVM,
     payer: &Keypair,
@@ -199,6 +211,28 @@ pub fn approve_milestone_ix(approver: &Pubkey, vault: &Pubkey, milestone_index: 
         cookie_vault::accounts::ApproveMilestone {
             approver: *approver,
             vault: *vault,
+        }
+        .to_account_metas(None),
+    )
+}
+
+pub fn cancel_vault_ix(
+    depositor: &Pubkey,
+    vault: &Pubkey,
+    mint: &Pubkey,
+    vault_token_account: &Pubkey,
+    depositor_token_account: &Pubkey,
+) -> Instruction {
+    Instruction::new_with_bytes(
+        cookie_vault::id(),
+        &cookie_vault::instruction::CancelVault {}.data(),
+        cookie_vault::accounts::CancelVault {
+            depositor: *depositor,
+            vault: *vault,
+            mint: *mint,
+            vault_token_account: *vault_token_account,
+            depositor_token_account: *depositor_token_account,
+            token_program: TOKEN_PROGRAM_ID,
         }
         .to_account_metas(None),
     )
