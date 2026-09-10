@@ -136,7 +136,7 @@ fn initialize_vault_rejects_too_many_milestones() {
     let (vault, _bump) = vault_pda(&f.depositor.pubkey(), &f.recipient.pubkey(), vault_id);
     let vault_ata = vault_token_account(&vault, &f.mint);
 
-    let amounts = vec![ONE_TOKEN; cookie_vault::constants::MAX_MILESTONES + 1];
+    let amounts = vec![ONE_TOKEN; cookie_vault::constants::MAX_MILESTONES as usize + 1];
     let ix = initialize_vault_ix(
         &f.depositor.pubkey(),
         &vault,

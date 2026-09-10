@@ -135,7 +135,7 @@ fn validate_condition(
                 .ok_or(CookieVaultError::InvalidCondition)?;
             require!(!amounts.is_empty(), CookieVaultError::InvalidCondition);
             require!(
-                amounts.len() <= MAX_MILESTONES,
+                amounts.len() <= MAX_MILESTONES as usize,
                 CookieVaultError::TooManyMilestones
             );
 
