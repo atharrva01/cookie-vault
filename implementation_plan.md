@@ -68,6 +68,13 @@ Checked against this machine right now: Node 24.13.1, npm 11.8.0, git 2.34.1, gh
 
 **Test before moving on:** all four tests above pass locally, `anchor build` has zero warnings.
 
+**Status: done.** `state.rs`, `error.rs` (all nine variants from §4.4, not just the ones reachable yet), `constants.rs`, and `instructions/initialize_vault.rs` are written and replace the scaffold's counter/increment demo. `tests/initialize_vault.rs` has 5 passing tests — the 4 planned above, plus a milestone-vault happy path (added because the milestone branch of `initialize_vault` otherwise had no acceptance-path coverage, only its rejection paths). `cargo fmt --check` and `cargo clippy --tests` are both clean.
+
+Three toolchain findings worth keeping in view for later phases:
+- **This Anchor fork's `CpiContext::new` takes a `Pubkey` (the target program's ID), not an `AccountInfo`** — a real signature change from mainline Anchor. Every future CPI (`claim`, `approve_milestone`, `cancel_vault`) needs `ctx.accounts.token_program.key()`, not `.to_account_info()`.
+- **`litesvm-token` is unusable here**: it forces `litesvm` from 0.10.0 to 0.16.0, whose `solana-bpf-loader-program` pin requires a nightly-only compiler feature and fails to build on stable. Test SPL setup (mint creation, ATAs, minting) is done by hand instead, using `spl-token-interface`/`spl-associated-token-account-interface` instruction-builders directly against `litesvm 0.10` — see the helpers at the top of `tests/initialize_vault.rs` (`create_mint`, `create_ata_with_balance`) and reuse them in Phase 2-4's tests rather than reintroducing `litesvm-token`.
+- **IDL generation is currently broken and deferred, not fixed**: `anchor build` (even with the `--arch v1` fix) fails its separate IDL-build pass on the same nightly-only dependency, seemingly because that pass also touches dev-dependencies. `scripts/build.sh` now passes `--no-idl` to keep the program build itself working. **This must be revisited before Phase 6** — the frontend's generated TS client depends on `target/idl/cookie_vault.json` existing. Two untried options at that point: install a nightly toolchain scoped to just the IDL-build step, or re-check whether upstream has published a fixed `solana-syscalls` by then.
+
 ---
 
 ## Phase 2 — `claim` (time-lock path)
