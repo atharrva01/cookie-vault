@@ -1,9 +1,9 @@
-/* Cookie Vault commits to one look — dark, warm-accented, crypto-native —
-   rather than hedging between light and dark. This direction is deliberately
-   close to what actually read as distinctive among the Cookie Chain
-   submissions reviewed while building this (Cookie Tab's palette in
-   particular), instead of the flat corporate-blue-on-white default this
-   started with. */
+/* Cookie Vault commits to one look — dark, pastel-mint-accented,
+   crypto-native — rather than hedging between light and dark. Mint reads
+   as fresh and product-native without colliding with the semantic status
+   green (--ok): it's pulled noticeably cooler/lighter in hue and lightness
+   so a brand-colored button and an "Active" status pill never look like
+   they're saying the same thing. */
 :root {
   --bg: #0d0f14;
   --bg2: #13161d;
@@ -12,9 +12,9 @@
   --border: #262c3a;
   --text: #e8eaf0;
   --muted: #8b93a7;
-  --accent: #e0a458;
-  --accent-2: #f2c98a;
-  --accent-ink: #1a1207;
+  --accent: #8fe0c4;
+  --accent-2: #b8f0dc;
+  --accent-ink: #06201a;
   --ok: #4fd18b;
   --warn: #ffd166;
   --err: #ff6b6b;
@@ -31,9 +31,9 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: radial-gradient(1200px 600px at 80% -10%, rgba(224, 164, 88, 0.12) 0%, transparent 60%), var(--bg);
+  background: radial-gradient(1200px 600px at 80% -10%, rgba(143, 224, 196, 0.12) 0%, transparent 60%), var(--bg);
   color: var(--text);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Sora', system-ui, -apple-system, sans-serif;
   font-size: 16px;
   line-height: 1.5;
 }
@@ -112,7 +112,7 @@ button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
-  box-shadow: 0 4px 16px rgba(224, 164, 88, 0.25);
+  box-shadow: 0 4px 16px rgba(143, 224, 196, 0.25);
 }
 button.primary:hover:not(:disabled) {
   background: var(--accent-2);
@@ -173,8 +173,8 @@ button.sm {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(160deg, rgba(224, 164, 88, 0.28), rgba(224, 164, 88, 0.06));
-  border: 1px solid rgba(224, 164, 88, 0.35);
+  background: linear-gradient(160deg, rgba(143, 224, 196, 0.28), rgba(143, 224, 196, 0.06));
+  border: 1px solid rgba(143, 224, 196, 0.35);
   font-size: 1rem;
   font-weight: 800;
   line-height: 1;
@@ -208,7 +208,7 @@ button.sm {
 }
 .nav-link.active {
   color: var(--accent);
-  background: rgba(224, 164, 88, 0.12);
+  background: rgba(143, 224, 196, 0.12);
 }
 
 .topbar-right {
@@ -368,7 +368,9 @@ main {
 }
 .hero h1 {
   font-size: 3rem;
-  font-weight: 900;
+  /* 800 is Sora's heaviest cut on Google Fonts — going higher just asks the
+     browser to synthesize a bolder weight, which looks blurry, not bold. */
+  font-weight: 800;
   line-height: 1.02;
   letter-spacing: -0.03em;
 }
@@ -471,8 +473,8 @@ main {
 }
 .pill.accent {
   color: var(--accent);
-  border-color: rgba(224, 164, 88, 0.35);
-  background: rgba(224, 164, 88, 0.08);
+  border-color: rgba(143, 224, 196, 0.35);
+  background: rgba(143, 224, 196, 0.08);
 }
 
 /* A numbered, left-aligned list instead of a grid of identically-shaped
@@ -590,10 +592,21 @@ main {
   gap: 18px;
 }
 .site-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
 }
 .site-footer a:hover {
   color: var(--accent);
+}
+.site-footer-bottom {
+  max-width: 1000px;
+  margin: 20px auto 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 @media (max-width: 560px) {
