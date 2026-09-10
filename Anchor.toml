@@ -7,7 +7,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-cookie_vault = "rjHBQ3fcHKCr4VEKQjkwBtDuNZG8YCAZHmfKWfaHER5"
+cookie_vault = "35GMkSwvDYLk1FYjXcMBp2PosgkYCQVFPByAsvEm9147"
 
 [provider]
 cluster = "localnet"
