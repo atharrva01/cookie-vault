@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { WalletProvider } from './components/WalletContext'
 import { WalletButton } from './components/WalletButton'
 import { connection } from './lib/chain'
 import { navigate, useRoute } from './lib/router'
 import CreateVault from './pages/CreateVault'
+import MyVaults from './pages/MyVaults'
+import VaultDetail from './pages/VaultDetail'
 
 function useChainUp(): boolean {
   const [up, setUp] = useState(true)
@@ -24,20 +26,33 @@ function useChainUp(): boolean {
   return up
 }
 
+function NavLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <a
+      href={`#${to}`}
+      onClick={(e) => {
+        e.preventDefault()
+        navigate(to)
+      }}
+    >
+      {children}
+    </a>
+  )
+}
+
 function Topbar() {
   const up = useChainUp()
   return (
     <header className="topbar">
-      <a
-        href="#/"
-        className="brand"
-        onClick={(e) => {
-          e.preventDefault()
-          navigate('/')
-        }}
-      >
-        <span aria-hidden>🍪</span> Cookie Vault
-      </a>
+      <NavLink to="/">
+        <span className="brand">
+          <span aria-hidden>🍪</span> Cookie Vault
+        </span>
+      </NavLink>
+      <nav style={{ display: 'flex', gap: 14 }}>
+        <NavLink to="/vaults">My Vaults</NavLink>
+        <NavLink to="/create">Create Vault</NavLink>
+      </nav>
       <div className="topbar-right">
         <span className={`chain-badge${up ? '' : ' down'}`}>
           <span className="pulse" /> {up ? 'Cookie Chain' : 'RPC unreachable'}
@@ -83,6 +98,10 @@ function Routes() {
       return <Home />
     case '/create':
       return <CreateVault />
+    case '/vaults':
+      return <MyVaults />
+    case '/vault':
+      return <VaultDetail />
     default:
       return <NotFound />
   }

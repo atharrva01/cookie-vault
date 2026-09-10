@@ -169,3 +169,31 @@ export async function fetchVault(provider: AnchorProvider, vault: PublicKey): Pr
     return null
   }
 }
+
+export interface VaultListEntry {
+  pda: PublicKey
+  account: VaultAccount
+}
+
+// Offsets into the raw account bytes: 8-byte Anchor discriminator, then
+// `depositor: Pubkey` (32 bytes) immediately, then `recipient: Pubkey` (32
+// bytes) immediately after that — both fixed-size and both the first two
+// fields declared on `Vault` (state.rs), so these offsets are safe to hand
+// compute. Nothing past `recipient` should ever be memcmp'd this way —
+// every later field sits behind at least one variable-length `Vec`.
+const DEPOSITOR_OFFSET = 8
+const RECIPIENT_OFFSET = 8 + 32
+
+/** Every vault where `wallet` is the depositor or the recipient, deduped by address. */
+export async function fetchVaultsFor(provider: AnchorProvider, wallet: PublicKey): Promise<VaultListEntry[]> {
+  const program = getProgram(provider)
+  const [asDepositor, asRecipient] = await Promise.all([
+    program.account.vault.all([{ memcmp: { offset: DEPOSITOR_OFFSET, bytes: wallet.toBase58() } }]),
+    program.account.vault.all([{ memcmp: { offset: RECIPIENT_OFFSET, bytes: wallet.toBase58() } }]),
+  ])
+  const byAddress = new Map<string, VaultListEntry>()
+  for (const { publicKey, account } of [...asDepositor, ...asRecipient]) {
+    byAddress.set(publicKey.toBase58(), { pda: publicKey, account: account as unknown as VaultAccount })
+  }
+  return [...byAddress.values()]
+}

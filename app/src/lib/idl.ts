@@ -51,3 +51,24 @@ export function buildProvider(
 export function getProgram(provider: AnchorProvider): Program<CookieVault> {
   return new Program<CookieVault>(idlJson as CookieVault, provider)
 }
+
+/**
+ * A provider for read-only calls (`program.account.*.fetch`/`.all`) when no
+ * wallet is connected — vault state is public on-chain data, so viewing it
+ * shouldn't require one (design_doc.md §2: "anyone can view a vault's
+ * status"). `AnchorProvider` still requires *some* wallet-shaped object;
+ * this one's signing methods throw instead of silently doing something
+ * wrong if a write path ever accidentally reaches them.
+ */
+export function buildReadOnlyProvider(connection: Connection): AnchorProvider {
+  const wallet: WalletLike = {
+    publicKey: PublicKey.default,
+    signTransaction() {
+      return Promise.reject(new Error('Connect a wallet to sign transactions'))
+    },
+    signAllTransactions() {
+      return Promise.reject(new Error('Connect a wallet to sign transactions'))
+    },
+  }
+  return new AnchorProvider(connection, wallet, { commitment: 'confirmed' })
+}
