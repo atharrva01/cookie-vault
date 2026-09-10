@@ -192,6 +192,18 @@ pub fn claim_ix(
     )
 }
 
+pub fn approve_milestone_ix(approver: &Pubkey, vault: &Pubkey, milestone_index: u8) -> Instruction {
+    Instruction::new_with_bytes(
+        cookie_vault::id(),
+        &cookie_vault::instruction::ApproveMilestone { milestone_index }.data(),
+        cookie_vault::accounts::ApproveMilestone {
+            approver: *approver,
+            vault: *vault,
+        }
+        .to_account_metas(None),
+    )
+}
+
 // Test-only helper; boxing the error to satisfy `result_large_err` isn't
 // worth the noise it'd add at every call site.
 #[allow(clippy::result_large_err)]
