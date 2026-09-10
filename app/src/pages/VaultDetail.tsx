@@ -151,11 +151,25 @@ export default function VaultDetail() {
     )
   }
 
+  const roles = [isDepositor && 'depositor', isRecipient && 'recipient', isApprover && 'approver'].filter(Boolean) as string[]
+
   return (
     <main>
-      <h1>Vault detail</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
+        <h1 style={{ marginBottom: 0 }}>Vault detail</h1>
+        {vault.cancelled ? (
+          <span className="pill err">Cancelled</span>
+        ) : (
+          <span className="pill ok">Active</span>
+        )}
+        {roles.map((r) => (
+          <span key={r} className="pill accent">
+            you: {r}
+          </span>
+        ))}
+      </div>
 
-      <div className="card" style={{ marginBottom: 20 }}>
+      <div className="card" style={{ marginBottom: 20, marginTop: 16 }}>
         <div className="field">
           <label>Vault address (PDA)</label>
           <AddressLink address={pda.toBase58()} />
@@ -182,7 +196,6 @@ export default function VaultDetail() {
             {fmtWithUsd(vault.totalAmount)} / {fmtWithUsd(vault.releasedAmount)}
           </span>
         </div>
-        {vault.cancelled && <p className="error">This vault has been cancelled.</p>}
         {!vault.cancelled && isDepositor && vault.releasedAmount.isZero() && (
           <button
             className="ghost sm"
@@ -193,7 +206,7 @@ export default function VaultDetail() {
           </button>
         )}
         {!vault.cancelled && isDepositor && !vault.releasedAmount.isZero() && (
-          <p className="muted small">Can't cancel — funds have already been released from this vault.</p>
+          <p className="muted small">Can't cancel: funds have already been released from this vault.</p>
         )}
       </div>
 
@@ -201,7 +214,7 @@ export default function VaultDetail() {
         <div className="card">
           <h2>Time lock</h2>
           <p className="muted small">
-            Unlocks {vault.unlockTimestamp ? new Date(vault.unlockTimestamp.toNumber() * 1000).toLocaleString() : '—'}
+            Unlocks {vault.unlockTimestamp ? new Date(vault.unlockTimestamp.toNumber() * 1000).toLocaleString() : 'unknown'}
           </p>
           {isRecipient && !vault.cancelled && (
             <>
@@ -227,10 +240,10 @@ export default function VaultDetail() {
             const approvedByMe = publicKey ? m.approvedBy.some((a) => a.equals(publicKey)) : false
             const busy = phase.kind !== 'idle' && phase.kind !== 'confirmed' && phase.kind !== 'failed'
             return (
-              <div key={i} style={{ padding: '10px 0', borderTop: i > 0 ? '1px solid var(--line)' : undefined }}>
+              <div key={i} style={{ padding: '10px 0', borderTop: i > 0 ? '1px solid var(--border)' : undefined }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                   <div>
-                    <strong>Milestone {i + 1}</strong> — {fmt(m.amount)}
+                    <strong>Milestone {i + 1}:</strong> {fmt(m.amount)}
                     <div className="muted small">
                       {m.claimed ? 'Claimed' : approved ? 'Approved, ready to claim' : `${m.approvedBy.length}/${vault.threshold} approved`}
                     </div>
@@ -261,7 +274,7 @@ export default function VaultDetail() {
             {activity.map((entry) => (
               <div
                 key={entry.signature}
-                style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--line)' }}
+                style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--border)' }}
               >
                 <span>{entry.label}</span>
                 <span className="muted small">
@@ -278,7 +291,9 @@ export default function VaultDetail() {
       <TxStatus phase={phase} />
 
       {!isDepositor && !isRecipient && !isApprover && (
-        <p className="muted small">You're viewing this vault's public on-chain state — you're not the depositor, recipient, or an approver.</p>
+        <p className="muted small">
+          You're viewing this vault's public on-chain state. You're not the depositor, recipient, or an approver.
+        </p>
       )}
     </main>
   )

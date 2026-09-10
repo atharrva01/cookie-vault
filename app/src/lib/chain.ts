@@ -60,7 +60,7 @@ export function formatUnits(raw: bigint | number | string, decimals: number, max
 }
 
 export function fmtUsd(v: number): string {
-  if (!Number.isFinite(v)) return '—'
+  if (!Number.isFinite(v)) return 'N/A'
   if (v >= 1) return `$${v.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
   if (v >= 0.01) return `$${v.toFixed(3)}`
   return `$${v.toPrecision(3)}`

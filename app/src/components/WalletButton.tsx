@@ -11,7 +11,7 @@ export function NetworkBanner() {
   if (onCookieChain !== false) return null
   return (
     <div className="callout warn">
-      Your wallet is on another network. Cookie Vault only works on Cookie Chain — connect it, or the
+      Your wallet is on another network. Cookie Vault only works on Cookie Chain, so switch to it, or the
       transaction simulation and balance shown here won't be accurate.{' '}
       {canSwitchNetwork ? (
         <button className="sm primary" onClick={() => void switchToCookieChain().catch(() => undefined)}>

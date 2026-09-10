@@ -20,7 +20,7 @@ export function txErrorMessage(e: unknown): string {
   if (/reject|denied|cancel|declin/i.test(msg)) return 'You rejected the request in your wallet.'
   if (/insufficient/i.test(msg)) return "You don't have enough COOK to cover this transaction and its fees."
   if (/blockhash not found|expired/i.test(msg)) {
-    return 'This transaction took too long and expired before confirming — please try again.'
+    return 'This transaction took too long and expired before confirming. Please try again.'
   }
   return msg
 }

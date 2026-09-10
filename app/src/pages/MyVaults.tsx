@@ -50,7 +50,7 @@ function VaultStatus({ entry, viewerIsRecipient, now }: { entry: VaultListEntry;
   return (
     <span className={claimedCount === total ? 'ok small' : 'muted small'}>
       {claimedCount}/{total} milestones claimed
-      {viewerIsRecipient && claimedCount < total ? ' — check for approved ones' : ''}
+      {viewerIsRecipient && claimedCount < total ? ' (check for approved ones)' : ''}
     </span>
   )
 }
@@ -93,7 +93,15 @@ export default function MyVaults() {
 
       {error && <p className="error">Couldn't load vaults: {error}</p>}
       {!error && vaults === null && <p className="muted">Loading…</p>}
-      {vaults?.length === 0 && <p className="muted">No vaults yet.</p>}
+
+      {vaults?.length === 0 && (
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <p className="muted">No vaults yet for this wallet.</p>
+          <button className="primary" onClick={() => navigate('/create')}>
+            Create your first vault
+          </button>
+        </div>
+      )}
 
       {vaults && vaults.length > 0 && (
         <div className="card" style={{ padding: 0 }}>
@@ -104,18 +112,18 @@ export default function MyVaults() {
             return (
               <div
                 key={entry.pda.toBase58()}
-                style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
+                className="list-row"
                 onClick={() => navigate(`/vault?id=${entry.pda.toBase58()}`)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                   <div>
                     <div className="mono small">{entry.pda.toBase58()}</div>
-                    <div className="muted small">
+                    <div className="muted small" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                       {decimals !== undefined
                         ? formatUnits(entry.account.totalAmount.toString(), decimals, 4)
                         : entry.account.totalAmount.toString()}{' '}
-                      total · {isDepositor ? 'you deposited' : 'you receive'}
-                      {isDepositor && isRecipient ? ' (both)' : ''}
+                      total
+                      <span className="pill">{isDepositor && isRecipient ? 'depositor & recipient' : isDepositor ? 'depositor' : 'recipient'}</span>
                     </div>
                   </div>
                   <VaultStatus entry={entry} viewerIsRecipient={isRecipient} now={now} />

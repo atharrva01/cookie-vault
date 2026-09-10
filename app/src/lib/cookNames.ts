@@ -51,7 +51,7 @@ export interface ResolvedName {
 export async function resolveCookName(input: string): Promise<ResolvedName | null> {
   const label = normalizeName(input)
   const err = nameError(label)
-  if (err) throw new Error(`"${input}" is not a valid ${COOK_TLD} name — ${err}`)
+  if (err) throw new Error(`"${input}" is not a valid ${COOK_TLD} name: ${err}`)
 
   const [pda] = PublicKey.findProgramAddressSync([Buffer.from('domain'), Buffer.from(label)], COOKOVEN_PROGRAM_ID)
   const info = await connection.getAccountInfo(pda)

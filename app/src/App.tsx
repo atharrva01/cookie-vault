@@ -29,6 +29,8 @@ function useChainUp(): boolean {
 }
 
 function NavLink({ to, children }: { to: string; children: ReactNode }) {
+  const { path } = useRoute()
+  const active = path === to
   return (
     <a
       href={`#${to}`}
@@ -36,6 +38,7 @@ function NavLink({ to, children }: { to: string; children: ReactNode }) {
         e.preventDefault()
         navigate(to)
       }}
+      style={active ? { color: 'var(--text)', fontWeight: 700 } : undefined}
     >
       {children}
     </a>
@@ -70,15 +73,49 @@ function Home() {
   return (
     <main>
       <section className="hero">
-        <h1>Programmable escrow for Cookie Chain</h1>
+        <span className="eyebrow">Programmable escrow, on-chain</span>
+        <h1>
+          Lock funds. Release them
+          <br />
+          on your terms.
+        </h1>
         <p className="lead">
-          Lock funds once, release them under conditions you define — a full unlock on a date, or
-          milestone-by-milestone as work is delivered and approved.
+          A full unlock on a date, or milestone-by-milestone as work is delivered and approved. Custody lives in
+          a program-derived account, not a person's keypair.
         </p>
+        <div className="pill-row">
+          <span className="pill">No admin key</span>
+          <span className="pill">PDA-custodied</span>
+          <span className="pill">Open source</span>
+        </div>
         <button className="primary" onClick={() => navigate('/create')}>
           Create a vault
         </button>
       </section>
+
+      <div className="callout-highlight">
+        <h2>Trustless by construction</h2>
+        <p className="muted" style={{ maxWidth: 560, margin: '0 auto' }}>
+          Funds are held by a Program Derived Address that only Cookie Vault's own instruction logic can move.
+          There's no backdoor and no "trust me" step: the depositor locks the full amount up front, and the
+          program enforces the release conditions on-chain.
+        </p>
+      </div>
+
+      <div className="feature-grid">
+        <div className="card">
+          <h3>Time lock</h3>
+          <p className="muted small">Funds unlock in full once a date you choose has passed.</p>
+        </div>
+        <div className="card">
+          <h3>Milestones</h3>
+          <p className="muted small">Split a vault into tranches, and release each one as it's approved.</p>
+        </div>
+        <div className="card">
+          <h3>Cancel anytime</h3>
+          <p className="muted small">Before anything's claimed, the depositor can cancel and reclaim in full.</p>
+        </div>
+      </div>
     </main>
   )
 }
@@ -88,7 +125,7 @@ function MockBanner() {
   return (
     <div className="callout warn" style={{ margin: '0 20px', marginTop: 12 }}>
       <strong>Mock mode.</strong> "{`Mock Wallet (dev)`}" in the wallet picker is a freshly generated, unfunded
-      keypair — reads hit the real Cookie Chain network, but any write will correctly fail with "insufficient
+      keypair. Reads hit the real Cookie Chain network, but any write will correctly fail with "insufficient
       funds" once it reaches the chain. For UI testing only; drop <span className="mono">?mock=1</span> from the
       URL for the real thing.
     </div>
@@ -103,6 +140,21 @@ function NotFound() {
         Back home
       </button>
     </main>
+  )
+}
+
+function Footer() {
+  return (
+    <footer className="site-footer">
+      Cookie Vault is open source.{' '}
+      <a href="https://github.com/atharrva01/cookie-vault" target="_blank" rel="noreferrer">
+        View on GitHub
+      </a>
+      {' · '}
+      <a href="https://docs.cookiechain.wtf" target="_blank" rel="noreferrer">
+        Cookie Chain docs
+      </a>
+    </footer>
   )
 }
 
@@ -130,6 +182,7 @@ export default function App() {
       <Topbar />
       <MockBanner />
       <Routes />
+      <Footer />
     </WalletProvider>
   )
 }

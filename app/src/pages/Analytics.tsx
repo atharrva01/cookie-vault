@@ -104,7 +104,7 @@ export default function Analytics() {
   return (
     <main>
       <h1>Analytics</h1>
-      <p className="lead">Every vault Cookie Vault has ever created on Cookie Chain — not just yours.</p>
+      <p className="lead">Every vault Cookie Vault has ever created on Cookie Chain, not just yours.</p>
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -115,7 +115,7 @@ export default function Analytics() {
           <div>
             <div className="muted small">Claim rate</div>
             <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>
-              {stats.totalVaults > 0 ? `${Math.round((stats.fullyReleased / stats.totalVaults) * 100)}%` : '—'}
+              {stats.totalVaults > 0 ? `${Math.round((stats.fullyReleased / stats.totalVaults) * 100)}%` : 'N/A'}
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ export default function Analytics() {
           if (usd !== undefined) knownUsd += usd
           else hasUnknownPrice = true
           return (
-            <div key={mint.toBase58()} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--line)' }}>
+            <div key={mint.toBase58()} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
               <span>{info ? `${info.name} (${info.symbol})` : shortAddr(mint.toBase58())}</span>
               <span>
                 {amount} {info?.symbol ?? ''}
