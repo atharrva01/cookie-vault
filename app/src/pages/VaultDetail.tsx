@@ -3,7 +3,7 @@ import { PublicKey, type Transaction } from '@solana/web3.js'
 import { connection, formatUnits } from '../lib/chain'
 import { resolveMint, type ResolvedMint } from '../lib/das'
 import { buildProvider, buildReadOnlyProvider, PROGRAM_ID } from '../lib/idl'
-import { approveMilestoneTx, claimTx, fetchVault, type VaultAccount } from '../lib/program'
+import { approveMilestoneTx, cancelVaultTx, claimTx, fetchVault, type VaultAccount } from '../lib/program'
 import { sendWithStatus } from '../lib/transact'
 import { txErrorMessage, type TxPhase } from '../lib/txStatus'
 import { useWallet } from '../hooks/useWallet'
@@ -115,6 +115,14 @@ export default function VaultDetail() {
     void runAction(() => approveMilestoneTx(buildProvider(connection, publicKey, sign), pda!, publicKey, milestoneIndex))
   }
 
+  function handleCancel() {
+    if (!publicKey || !vault) return
+    if (!window.confirm('Cancel this vault and refund the full remaining balance to you? This cannot be undone.')) return
+    void runAction(() =>
+      cancelVaultTx(buildProvider(connection, publicKey, sign), { vault: pda!, depositor: publicKey, mint: vault.mint }),
+    )
+  }
+
   return (
     <main>
       <h1>Vault detail</h1>
@@ -147,6 +155,18 @@ export default function VaultDetail() {
           </span>
         </div>
         {vault.cancelled && <p className="error">This vault has been cancelled.</p>}
+        {!vault.cancelled && isDepositor && vault.releasedAmount.isZero() && (
+          <button
+            className="ghost sm"
+            onClick={handleCancel}
+            disabled={phase.kind !== 'idle' && phase.kind !== 'confirmed' && phase.kind !== 'failed'}
+          >
+            Cancel vault &amp; refund me
+          </button>
+        )}
+        {!vault.cancelled && isDepositor && !vault.releasedAmount.isZero() && (
+          <p className="muted small">Can't cancel — funds have already been released from this vault.</p>
+        )}
       </div>
 
       {isTimeLock ? (

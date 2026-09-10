@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { WalletProvider } from './components/WalletContext'
 import { WalletButton } from './components/WalletButton'
 import { connection } from './lib/chain'
+import { isMockMode } from './lib/mock'
 import { navigate, useRoute } from './lib/router'
 import CreateVault from './pages/CreateVault'
 import MyVaults from './pages/MyVaults'
@@ -80,6 +81,18 @@ function Home() {
   )
 }
 
+function MockBanner() {
+  if (!isMockMode()) return null
+  return (
+    <div className="callout warn" style={{ margin: '0 20px', marginTop: 12 }}>
+      <strong>Mock mode.</strong> "{`Mock Wallet (dev)`}" in the wallet picker is a freshly generated, unfunded
+      keypair — reads hit the real Cookie Chain network, but any write will correctly fail with "insufficient
+      funds" once it reaches the chain. For UI testing only; drop <span className="mono">?mock=1</span> from the
+      URL for the real thing.
+    </div>
+  )
+}
+
 function NotFound() {
   return (
     <main>
@@ -111,6 +124,7 @@ export default function App() {
   return (
     <WalletProvider>
       <Topbar />
+      <MockBanner />
       <Routes />
     </WalletProvider>
   )

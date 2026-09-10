@@ -5,6 +5,7 @@
 import { getWallets } from '@wallet-standard/app'
 import type { IdentifierString, Wallet, WalletAccount } from '@wallet-standard/base'
 import type { Transaction } from '@solana/web3.js'
+import { createMockWallet, isMockMode } from './mock'
 
 type ConnectFeature = {
   connect: (input?: { silent?: boolean }) => Promise<{ accounts: readonly WalletAccount[] }>
@@ -21,12 +22,17 @@ type SignTransactionFeature = {
 
 export const NIGHTLY_NAME = 'Nightly'
 
-/** Every registered Wallet Standard wallet that can sign Solana transactions, Nightly first. */
+/**
+ * Every registered Wallet Standard wallet that can sign Solana transactions,
+ * Nightly first, plus a synthetic mock wallet appended at the end when
+ * `?mock=1` is set — see mock.ts.
+ */
 export function listSolanaWallets(): Wallet[] {
-  return getWallets()
+  const real = getWallets()
     .get()
     .filter((w) => 'solana:signTransaction' in w.features && 'standard:connect' in w.features)
     .sort((a, b) => Number(b.name === NIGHTLY_NAME) - Number(a.name === NIGHTLY_NAME))
+  return isMockMode() ? [...real, createMockWallet()] : real
 }
 
 /** Wallets can register after page load (extension still initializing) — call `cb` when the list changes. */
