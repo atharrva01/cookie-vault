@@ -1,0 +1,14 @@
+# Rust / Anchor
+/target
+/programs/**/target
+.anchor
+test-ledger
+
+# Node
+node_modules
+dist
+.env
+*.local
+
+# OS
+.DS_Store
