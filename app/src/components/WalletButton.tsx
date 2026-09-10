@@ -71,7 +71,7 @@ export function WalletButton() {
         <span className="mono" title={account.address}>
           {shortAddr(account.address)}
         </span>
-        <span className="muted small">
+        <span className="muted small wallet-balance">
           {balance === null ? '…' : `${formatUnits(balance, COOK_DECIMALS, 3)} COOK`}
         </span>
         <button className="ghost sm" onClick={() => void disconnect()}>

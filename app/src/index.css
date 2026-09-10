@@ -137,16 +137,24 @@ button.sm {
 /* Sticky topbar with a live chain-status pulse — the app is talking to a
    real network, and the header should make that legible at a glance. */
 .topbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
+  padding: 0 24px;
   border-bottom: 1px solid var(--border);
   background: rgba(13, 15, 20, 0.75);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
   z-index: 20;
+}
+/* Capped at the same width as `main` and `.site-footer-inner` so the brand
+   and nav line up with the page content below them instead of spreading
+   edge-to-edge while everything under it sits in a centered 1000px column. */
+.topbar-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
 }
 .brand {
   display: flex;
@@ -617,8 +625,13 @@ main {
 }
 
 /* Below this, the nav links collapse behind a toggle instead of wrapping
-   onto the header and pushing the wallet button around unpredictably. */
-@media (max-width: 760px) {
+   onto the header and pushing the wallet button around unpredictably. 900px,
+   not the more usual ~760px, because a *connected* wallet pill (icon +
+   address + balance + disconnect button) is noticeably wider than the
+   disconnected "Connect wallet" button, and needs the extra room to stay on
+   one line — confirmed by measuring the header visibly grow a second row
+   around 800-850px when connected, before this was widened. */
+@media (max-width: 900px) {
   .main-nav {
     display: none;
     position: absolute;
@@ -660,6 +673,15 @@ main {
   }
 }
 
+/* On very narrow phones, the balance is the least essential part of the
+   connected wallet pill — address and the disconnect action stay, the
+   balance drops rather than the pill wrapping or squeezing everything down. */
+@media (max-width: 400px) {
+  .wallet-balance {
+    display: none;
+  }
+}
+
 /* Wallet connect button + picker modal */
 .wallet-pill {
   display: flex;
@@ -670,10 +692,12 @@ main {
   border-radius: 999px;
   background: var(--card);
   font-size: 0.85rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 .wallet-pill img {
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .modal-backdrop {

@@ -56,51 +56,53 @@ function Topbar() {
 
   return (
     <header className="topbar">
-      <a
-        href="#/"
-        className="brand"
-        onClick={(e) => {
-          e.preventDefault()
-          navigate('/')
-          closeMenu()
-        }}
-      >
-        {/* Letter mark, not an emoji: emoji glyphs depend on the OS having a color-emoji font
-            installed and render as a blank box when it doesn't (confirmed on this machine). */}
-        <span className="brand-mark" aria-hidden>
-          C
-        </span>
-        Cookie Vault
-      </a>
-
-      <nav className={`main-nav${menuOpen ? ' open' : ''}`} aria-label="Primary">
-        <NavLink to="/vaults" onClick={closeMenu}>
-          My Vaults
-        </NavLink>
-        <NavLink to="/create" onClick={closeMenu}>
-          Create Vault
-        </NavLink>
-        <NavLink to="/analytics" onClick={closeMenu}>
-          Analytics
-        </NavLink>
-      </nav>
-
-      <div className="topbar-right">
-        <span className={`chain-badge${up ? '' : ' down'}`}>
-          <span className="pulse" /> <span className="chain-badge-label">{up ? 'Cookie Chain' : 'RPC unreachable'}</span>
-        </span>
-        <WalletButton />
-        <button
-          type="button"
-          className={`nav-toggle${menuOpen ? ' open' : ''}`}
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((v) => !v)}
+      <div className="topbar-inner">
+        <a
+          href="#/"
+          className="brand"
+          onClick={(e) => {
+            e.preventDefault()
+            navigate('/')
+            closeMenu()
+          }}
         >
-          <span />
-          <span />
-          <span />
-        </button>
+          {/* Letter mark, not an emoji: emoji glyphs depend on the OS having a color-emoji font
+              installed and render as a blank box when it doesn't (confirmed on this machine). */}
+          <span className="brand-mark" aria-hidden>
+            C
+          </span>
+          Cookie Vault
+        </a>
+
+        <nav className={`main-nav${menuOpen ? ' open' : ''}`} aria-label="Primary">
+          <NavLink to="/vaults" onClick={closeMenu}>
+            My Vaults
+          </NavLink>
+          <NavLink to="/create" onClick={closeMenu}>
+            Create Vault
+          </NavLink>
+          <NavLink to="/analytics" onClick={closeMenu}>
+            Analytics
+          </NavLink>
+        </nav>
+
+        <div className="topbar-right">
+          <span className={`chain-badge${up ? '' : ' down'}`}>
+            <span className="pulse" /> <span className="chain-badge-label">{up ? 'Cookie Chain' : 'RPC unreachable'}</span>
+          </span>
+          <WalletButton />
+          <button
+            type="button"
+            className={`nav-toggle${menuOpen ? ' open' : ''}`}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
       </div>
     </header>
   )
