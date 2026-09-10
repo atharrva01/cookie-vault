@@ -106,49 +106,84 @@ function Home() {
   return (
     <main>
       <section className="hero">
-        <span className="eyebrow">Programmable escrow, on-chain</span>
-        <h1>
-          Lock funds. Release them
-          <br />
-          on your terms.
-        </h1>
-        <p className="lead">
-          A full unlock on a date, or milestone-by-milestone as work is delivered and approved. Custody lives in
-          a program-derived account, not a person's keypair.
-        </p>
-        <div className="pill-row">
-          <span className="pill">No admin key</span>
-          <span className="pill">PDA-custodied</span>
-          <span className="pill">Open source</span>
+        <div>
+          <span className="eyebrow">Programmable escrow, on-chain</span>
+          <h1>
+            Lock funds. Release them
+            <br />
+            on your terms.
+          </h1>
+          <p className="lead">
+            A full unlock on a date, or milestone-by-milestone as work is delivered and approved. Custody lives in
+            a program-derived account, not a person's keypair.
+          </p>
+          <div className="hero-actions">
+            <button className="primary" onClick={() => navigate('/create')}>
+              Create a vault
+            </button>
+            <button className="ghost" onClick={() => navigate('/vaults')}>
+              Browse vaults
+            </button>
+          </div>
+          <p className="hero-footnote">No admin key · PDA-custodied · Open source</p>
         </div>
-        <button className="primary" onClick={() => navigate('/create')}>
-          Create a vault
-        </button>
+
+        <div className="vault-preview" aria-hidden="true">
+          <span className="vault-preview-tag">Preview</span>
+          <div className="vault-preview-head">
+            <span className="mono">Vault · 4f2a…9c1b</span>
+            <span className="pill ok">Active</span>
+          </div>
+          <div className="vault-preview-amount">
+            <span className="vault-preview-num">2,500</span>
+            <span className="muted"> / 10,000 USDC released</span>
+          </div>
+          <div className="progress">
+            <div className="progress-fill" style={{ width: '25%' }} />
+          </div>
+          <div className="vault-preview-milestone">
+            <span>Milestone 2 of 4</span>
+            <span className="muted small">pending approval</span>
+          </div>
+        </div>
       </section>
 
-      <div className="callout-highlight">
-        <h2>Trustless by construction</h2>
-        <p className="muted" style={{ maxWidth: 560, margin: '0 auto' }}>
-          Funds are held by a Program Derived Address that only Cookie Vault's own instruction logic can move.
-          There's no backdoor and no "trust me" step: the depositor locks the full amount up front, and the
-          program enforces the release conditions on-chain.
-        </p>
-      </div>
+      <section className="how-it-works">
+        <h2 className="section-heading">How it works</h2>
 
-      <div className="feature-grid">
-        <div className="card">
-          <h3>Time lock</h3>
-          <p className="muted small">Funds unlock in full once a date you choose has passed.</p>
+        <div className="step-row">
+          <span className="step-num">01</span>
+          <div>
+            <h3>Deposit</h3>
+            <p className="muted small">
+              The depositor locks the full amount into a program-derived vault up front. No admin key exists
+              that could move it later.
+            </p>
+          </div>
         </div>
-        <div className="card">
-          <h3>Milestones</h3>
-          <p className="muted small">Split a vault into tranches, and release each one as it's approved.</p>
+
+        <div className="step-row">
+          <span className="step-num">02</span>
+          <div>
+            <h3>Choose a release condition</h3>
+            <p className="muted small">
+              Time lock unlocks the full balance once a date passes. Milestones split it into tranches, released
+              as approvers sign off.
+            </p>
+          </div>
         </div>
-        <div className="card">
-          <h3>Cancel anytime</h3>
-          <p className="muted small">Before anything's claimed, the depositor can cancel and reclaim in full.</p>
+
+        <div className="step-row">
+          <span className="step-num">03</span>
+          <div>
+            <h3>Claim</h3>
+            <p className="muted small">
+              The recipient claims directly from the program. Before anything's claimed, the depositor can cancel
+              and reclaim in full.
+            </p>
+          </div>
         </div>
-      </div>
+      </section>
     </main>
   )
 }
