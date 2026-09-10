@@ -28,17 +28,19 @@ function useChainUp(): boolean {
   return up
 }
 
-function NavLink({ to, children }: { to: string; children: ReactNode }) {
+function NavLink({ to, children, onClick }: { to: string; children: ReactNode; onClick?: () => void }) {
   const { path } = useRoute()
   const active = path === to
   return (
     <a
       href={`#${to}`}
+      className={`nav-link${active ? ' active' : ''}`}
+      aria-current={active ? 'page' : undefined}
       onClick={(e) => {
         e.preventDefault()
         navigate(to)
+        onClick?.()
       }}
-      style={active ? { color: 'var(--text)', fontWeight: 700 } : undefined}
     >
       {children}
     </a>
@@ -47,23 +49,54 @@ function NavLink({ to, children }: { to: string; children: ReactNode }) {
 
 function Topbar() {
   const up = useChainUp()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const closeMenu = () => setMenuOpen(false)
+
   return (
     <header className="topbar">
-      <NavLink to="/">
-        <span className="brand">
-          <span aria-hidden>🍪</span> Cookie Vault
+      <a
+        href="#/"
+        className="brand"
+        onClick={(e) => {
+          e.preventDefault()
+          navigate('/')
+          closeMenu()
+        }}
+      >
+        {/* Letter mark, not an emoji: emoji glyphs depend on the OS having a color-emoji font
+            installed and render as a blank box when it doesn't (confirmed on this machine). */}
+        <span className="brand-mark" aria-hidden>
+          C
         </span>
-      </NavLink>
-      <nav style={{ display: 'flex', gap: 14 }}>
-        <NavLink to="/vaults">My Vaults</NavLink>
-        <NavLink to="/create">Create Vault</NavLink>
-        <NavLink to="/analytics">Analytics</NavLink>
+        Cookie Vault
+      </a>
+
+      <nav className={`main-nav${menuOpen ? ' open' : ''}`} aria-label="Primary">
+        <NavLink to="/vaults" onClick={closeMenu}>
+          My Vaults
+        </NavLink>
+        <NavLink to="/create" onClick={closeMenu}>
+          Create Vault
+        </NavLink>
+        <NavLink to="/analytics" onClick={closeMenu}>
+          Analytics
+        </NavLink>
       </nav>
+
       <div className="topbar-right">
         <span className={`chain-badge${up ? '' : ' down'}`}>
-          <span className="pulse" /> {up ? 'Cookie Chain' : 'RPC unreachable'}
+          <span className="pulse" /> <span className="chain-badge-label">{up ? 'Cookie Chain' : 'RPC unreachable'}</span>
         </span>
         <WalletButton />
+        <button
+          type="button"
+          className="ghost sm nav-toggle"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
       </div>
     </header>
   )

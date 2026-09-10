@@ -139,33 +139,81 @@ button.sm {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 14px 24px;
+  gap: 8px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--border);
   background: rgba(13, 15, 20, 0.75);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 20;
 }
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   text-decoration: none;
   color: var(--text);
+  flex-shrink: 0;
 }
-.brand span[aria-hidden] {
-  font-size: 1.3rem;
-  filter: drop-shadow(0 2px 6px rgba(224, 164, 88, 0.5));
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(160deg, rgba(224, 164, 88, 0.28), rgba(224, 164, 88, 0.06));
+  border: 1px solid rgba(224, 164, 88, 0.35);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent);
 }
+
+/* Primary nav — pill links, not underlined <a> text, with a clear active state. */
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+}
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  border-radius: 999px;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.nav-link:hover {
+  color: var(--text);
+  background: var(--card-2);
+}
+.nav-link.active {
+  color: var(--accent);
+  background: rgba(224, 164, 88, 0.12);
+}
+
 .topbar-right {
   margin-left: auto;
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.nav-toggle {
+  display: none;
+  padding: 0.45rem 0.65rem;
+  font-size: 1rem;
+  line-height: 1;
 }
 .chain-badge {
   font-size: 0.8rem;
@@ -331,6 +379,50 @@ main {
 @media (max-width: 640px) {
   .hero h1 {
     font-size: 2.2rem;
+  }
+}
+
+/* Below this, the nav links collapse behind a toggle instead of wrapping
+   onto the header and pushing the wallet button around unpredictably. */
+@media (max-width: 760px) {
+  .main-nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    margin: 0;
+    padding: 10px 16px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .main-nav.open {
+    display: flex;
+  }
+  .nav-link {
+    padding: 10px 14px;
+  }
+  .nav-toggle {
+    display: inline-flex;
+  }
+  /* `.topbar` is already `position: sticky` (base rule) — that alone is
+     enough of a containing block for `.main-nav`'s `position: absolute`
+     below; setting `position: relative` here would silently override the
+     sticky behavior and un-stick the header on exactly the screens where
+     the toggle button needs it to still be reachable after scrolling. */
+}
+
+/* Narrower still: the network label is the first thing that can go, the dot alone still says "connected". */
+@media (max-width: 480px) {
+  .chain-badge-label {
+    display: none;
+  }
+  .brand {
+    font-size: 1rem;
   }
 }
 
