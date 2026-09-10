@@ -6,51 +6,53 @@ Companion to `design_doc.md` (the *what/why*). This is the *how*, broken into ph
 
 Checked against this machine right now: Node 24.13.1, npm 11.8.0, git 2.34.1, gh 2.71.0 are present. **Rust, Cargo, Solana CLI, and Anchor CLI are not installed** — Phase 0 has to install all four before any program code can be written.
 
+**Two things this plan got wrong before Phase 0 actually ran, corrected here once rather than in every phase below:**
+
+1. **Local testing is Rust-native (`litesvm`), not TypeScript/Mocha against `solana-test-validator`.** The installed Anchor version (1.2.0) scaffolds tests as Rust integration tests under `programs/cookie-vault/tests/*.rs`, using the `litesvm` crate to run the compiled program in-process — no validator to spin up, no JS test harness, no `tests/cookie-vault.ts`. `Anchor.toml` even ships with `skip_local_validator = true`. This is strictly better for iteration speed (tests run in well under a second), but every phase below that mentions "Anchor's TS test harness" or a `.ts` test file means "a Rust `#[test]` in `programs/cookie-vault/tests/`" instead. The Anchor-generated TS *client* for the frontend (Phase 6+) is unaffected — IDL generation doesn't depend on which test framework is used.
+2. **Every build must go through `./scripts/build.sh`, not bare `anchor build`.** `anchor build` defaults to `--arch v3` (the newest SBF instruction set); the `litesvm` version this scaffold pulls in can't load v3 binaries yet and fails with `InvalidAccountData` the moment a test tries to load the program. `./scripts/build.sh` pins `--arch v1`, which works. `./scripts/test.sh` rebuilds through that wrapper and then runs `cargo test`. **Always use the wrapper scripts, never call `anchor build`/`cargo test` directly** — a bare `anchor build` will silently produce a binary that breaks every test again.
+
 ---
 
 ## Phase 0 — Toolchain & repo scaffold
 
 **Goal:** a git repo with an Anchor workspace that builds and runs its (empty) test suite locally, and a frontend workspace that runs `npm run dev`. Nothing chain-specific yet.
 
-1. **🚩 Rust + Solana CLI + Anchor install.** This is a multi-step, multi-minute install (rustup, then Solana CLI via its install script, then `avm install latest` for Anchor) that changes your shell PATH and pulls binaries from the internet. I'll run it when you say go, but flagging it up front since it's not a quick `apt install` — want me to proceed with the standard install sequence (rustup.rs → Solana's official install script → `cargo install avm` → `avm install latest && avm use latest`), or do you already have a preferred install method (e.g. via a version manager you use for other projects)?
-2. Once the toolchain is confirmed (`anchor --version`, `solana --version` both resolve), scaffold the Anchor workspace:
-   ```
-   anchor init cookie-vault --javascript=false
-   ```
-   This creates `Anchor.toml`, `Cargo.toml`, `programs/cookie-vault/src/lib.rs`, `tests/cookie-vault.ts`, and a `migrations/` folder.
-3. Point Anchor at a **local validator** for all iteration (per design doc §8 — no faucet exists on Cookie Chain, so nothing touches the live RPC until Phase 5):
-   - `Anchor.toml` → `[provider] cluster = "localnet"`
-   - Confirm `solana-test-validator` runs (`solana-test-validator --version`)
-4. Repo hygiene, modeled on the cleanest of the five reviewed competitor repos (CookieLens):
+**Status: done.** What actually happened, since two things above didn't go as planned:
+
+1. Rust (rustup, stable), the Solana CLI (Agave 3.1.10, via `release.anza.xyz`'s installer), `avm`, and Anchor CLI (1.2.0) are installed. The prebuilt Anchor binary `avm` first grabbed didn't run at all — `GLIBC_2.39' not found` (this machine is Ubuntu 22.04 / glibc 2.35, the prebuilt binary was compiled for a newer distro) — fixed with `avm install latest --from-source --force`, a ~5 minute rebuild. Also had to separately run `cargo build-sbf --tools-version v1.57 --install-only` for the SBF compiler backend, which `anchor build` doesn't install on its own.
+2. `anchor init cookie-vault` (this Anchor version has no `--javascript` flag) scaffolded a workspace with a real difference from what this plan assumed: **tests are Rust, not TypeScript.** It generated `programs/cookie-vault/tests/test_initialize.rs` using the `litesvm` crate (an in-process SVM, not `solana-test-validator`), and `Anchor.toml` ships with `skip_local_validator = true`. See the corrected note above this phase — every later phase's testing description means "a Rust `#[test]`," not a `.ts` file.
+3. **Discovered by the default scaffold test failing**: `anchor build` defaults to `--arch v3`, and the `litesvm` version pulled in can't load v3 binaries (`InvalidAccountData` on `svm.add_program(...)`). Fixed with `./scripts/build.sh` / `./scripts/test.sh`, which pin `--arch v1`. **Always use these wrapper scripts**, not bare `anchor build`/`cargo test`.
+4. `Anchor.toml`'s `[toolchain]` table only supports `anchor_version`/`solana_version`/`package_manager` — there's no config-file way to pin the SBF arch, which is why the fix had to be a wrapper script rather than an Anchor.toml setting.
+5. Repo hygiene — actual layout (differs slightly from what was sketched pre-Phase-0: tests live inside `programs/cookie-vault/`, not at repo root, and `error.rs` is singular per the scaffold's own convention):
    ```
    cookie-vault/
-     programs/cookie-vault/src/...   # Anchor program (Phase 1-4)
-     tests/                          # Anchor TS test harness (Phase 1-4)
-     app/                            # frontend (Phase 6+)
+     Anchor.toml, Cargo.toml, rust-toolchain.toml
+     scripts/build.sh, scripts/test.sh   # always use these, see above
+     programs/cookie-vault/
+       Cargo.toml
+       src/                # lib.rs, state.rs, error.rs, constants.rs, instructions/  (Phase 1-4)
+       tests/               # litesvm Rust tests (Phase 1-4)
+     app/                   # frontend (Phase 6+, currently empty from anchor init)
      docs/
-       submission.md                 # bounty submission form answers, kept in sync
-       demo.md                       # script for the X thread demo walkthrough
-       x-thread.md                   # drafted thread text before posting
-       telegram.md                   # drafted Telegram share text before posting
-     design_doc.md                   # already exists
-     implementation_plan.md          # this file
-     README.md                       # written last, in Phase 10
+       submission.md, demo.md, x-thread.md, telegram.md   # written in Phase 10
+     design_doc.md, implementation_plan.md
+     README.md              # written last, in Phase 10
    ```
-5. `git init`, first commit. **🚩 GitHub repo**: the bounty requires a public open-source repo — I can create one with `gh repo create` once you tell me the repo name and whether it goes under your personal account or elsewhere, and confirm you want it created (this is a public, externally-visible action, so I'll wait for an explicit go-ahead rather than assume).
-6. `.gitignore`: `target/`, `.anchor/`, `node_modules/`, `dist/`, `.env`, test-ledger artifacts.
+6. **GitHub repo created**: [github.com/atharrva01/cookie-vault](https://github.com/atharrva01/cookie-vault), public.
+7. `.gitignore` at repo root: `/target`, `.anchor`, `test-ledger`, `node_modules`, `dist`, `.env`.
 
-**Test before moving on:** `anchor build` succeeds on the untouched scaffold; `anchor test` runs the default scaffold test against a local validator and passes.
+**Verified:** `./scripts/build.sh` succeeds; `./scripts/test.sh` runs the default scaffold test (litesvm-based) and passes; `anchor build` also generates `target/idl/cookie_vault.json`, confirming IDL generation works regardless of the test-framework surprise (this is what Phase 6+'s frontend TS client depends on).
 
 ---
 
 ## Phase 1 — Program skeleton: state + `initialize_vault`
 
-**Goal:** `initialize_vault` works end-to-end against `solana-test-validator` — deposit moves from a depositor's ATA into a PDA-owned vault ATA, vault state is readable. Time-lock condition only; milestone condition type exists in the enum but isn't exercised yet.
+**Goal:** `initialize_vault` works end-to-end in the `litesvm` test harness — deposit moves from a depositor's ATA into a PDA-owned vault ATA, vault state is readable. Time-lock condition only; milestone condition type exists in the enum but isn't exercised yet.
 
 **Files:**
-- `programs/cookie-vault/src/lib.rs` — program entrypoint, `declare_id!`, module wiring
-- `programs/cookie-vault/src/state.rs` — `Vault`, `Milestone`, `ConditionType`, `MAX_MILESTONES`/`MAX_APPROVERS` constants (design doc §4.2, copied in verbatim — this is the one place the design doc's Rust is meant to be pasted near-as-is)
-- `programs/cookie-vault/src/errors.rs` — the `#[error_code] CookieVaultError` enum, one variant per row in design doc §4.4 (`InvalidCondition`, `TooEarly`, `TooManyMilestones`, etc. — all nine, even though only a few are reachable yet, so the enum doesn't get piecemeal edits across phases)
+- `programs/cookie-vault/src/lib.rs` — program entrypoint, `declare_id!`, module wiring (replaces the scaffold's `counter`/`increment` demo)
+- `programs/cookie-vault/src/state.rs` — `Vault`, `Milestone`, `ConditionType`, `MAX_MILESTONES`/`MAX_APPROVERS` constants (design doc §4.2, copied in verbatim — this is the one place the design doc's Rust is meant to be pasted near-as-is); replaces the scaffold's placeholder `Counter` struct
+- `programs/cookie-vault/src/error.rs` — the `#[error_code] CookieVaultError` enum, one variant per row in design doc §4.4 (`InvalidCondition`, `TooEarly`, `TooManyMilestones`, etc. — all nine, even though only a few are reachable yet, so the enum doesn't get piecemeal edits across phases); replaces the scaffold's placeholder `ErrorCode` enum
 - `programs/cookie-vault/src/instructions/initialize_vault.rs` — the `InitializeVault` accounts struct (depositor signer, vault PDA via `init` + seeds from §4.2, depositor ATA, vault ATA via `init`, mint, token program, associated token program, system program) and the handler
 - `programs/cookie-vault/src/instructions/mod.rs` — re-exports
 
@@ -58,7 +60,7 @@ Checked against this machine right now: Node 24.13.1, npm 11.8.0, git 2.34.1, gh
 
 **Instruction logic** (per design doc §4.3): validate condition-specific fields, CPI `transfer_checked` (not the legacy `transfer` — required for Token-2022 compatibility, which the design doc's "SPL Tokens, Token-2022" support claim in §0 depends on) from depositor ATA → vault ATA, set `approvers = [depositor]`, `threshold = 1`.
 
-**Tests** (`tests/cookie-vault.ts`, Anchor's Mocha/Chai TS harness against the local validator):
+**Tests** (`programs/cookie-vault/tests/*.rs`, `litesvm`, run via `./scripts/test.sh`):
 1. Happy path: initialize a time-lock vault, assert vault account fields match input, assert vault ATA balance equals deposited amount, assert depositor ATA balance decreased accordingly
 2. `TooEarly`-adjacent validation: reject `unlock_timestamp` in the past
 3. Milestone-amount-sum validation: reject a milestone vault whose amounts don't sum to `total_amount` (exercises the enum path even though claim/approve aren't built yet)
@@ -70,7 +72,7 @@ Checked against this machine right now: Node 24.13.1, npm 11.8.0, git 2.34.1, gh
 
 ## Phase 2 — `claim` (time-lock path)
 
-**Goal:** the full Flow A from design doc §3 works locally: create a time-locked vault, attempt early claim (fails with `TooEarly`), warp the local validator's clock past unlock, claim succeeds, funds land in recipient's wallet.
+**Goal:** the full Flow A from design doc §3 works locally: create a time-locked vault, attempt early claim (fails with `TooEarly`), warp past unlock, claim succeeds, funds land in recipient's wallet.
 
 **Files:**
 - `programs/cookie-vault/src/instructions/claim.rs` — `Claim` accounts struct + handler for the `TimeLock` branch only (the `Milestone` branch is added in Phase 3, guarded by `condition_type` match — write the match arm now so Phase 3 is additive, not a rewrite)
@@ -85,7 +87,7 @@ Checked against this machine right now: Node 24.13.1, npm 11.8.0, git 2.34.1, gh
 
 **Tests:**
 1. Claim before unlock → asserts the transaction fails with `TooEarly`
-2. Advance the local validator's clock past `unlock_timestamp` (Anchor's local-validator test harness supports warping via `BanksClient` or, for `solana-test-validator`, via a short `sleep` with a near-future timestamp in the fixture — pick whichever the scaffold's test setup gives you) and claim succeeds
+2. Advance the clock past `unlock_timestamp` — `litesvm`'s `LiteSVM` exposes `set_sysvar::<Clock>(...)` to set the `Clock` sysvar directly to any timestamp, no real waiting or slot-warping needed — and confirm claim succeeds
 3. Double-claim after success → `AlreadyClaimed`
 4. Wrong signer attempts claim → `Unauthorized`
 5. Recipient with no prior ATA for the mint → claim still succeeds (`init_if_needed` path)
@@ -231,7 +233,7 @@ Each of these is independent — build whichever fit, skip the rest without bloc
 ## Phase 10 — Deployment, README, and submission
 
 1. **🚩 Hosting.** Deploy `app/` (static Vite build) to Vercel or Netlify — needs you to connect a GitHub account/repo to whichever host you prefer (or hand me a project/API token scoped for it, if you'd rather I drive it via CLI).
-2. `README.md` at repo root: architecture summary (can lean heavily on design_doc.md §1, §4.5, §10), setup instructions (local validator flow from Phase 0-4, frontend `npm run dev`), deployed program ID + live URL, explicit roadmap note on the multi-sig extension path (design doc §2's "explicitly out of scope" framing, stated as intentional honesty per §10).
+2. `README.md` at repo root: architecture summary (can lean heavily on design_doc.md §1, §4.5, §10), setup instructions (`./scripts/test.sh` for the litesvm test flow from Phase 0-4, frontend `npm run dev`), deployed program ID + live URL, explicit roadmap note on the multi-sig extension path (design doc §2's "explicitly out of scope" framing, stated as intentional honesty per §10).
 3. Fill in `docs/submission.md` with every field the Superteam Earn submission form asks for (live URL, GitHub repo, program address) — draft it as the single source of truth before pasting into the form.
 4. `docs/demo.md` → script the exact click-path for the demo (create a time-lock vault, create a milestone vault, approve, claim, show the on-chain state at each step) — this becomes both a personal rehearsal script and the shot list for the X thread.
 5. **🚩 X (Twitter) thread.** I can draft the full thread text in `docs/x-thread.md` (walkthrough + Cookie Chain Bridge guide link, per the bounty's explicit demo requirement) — posting it is on your account, so that step is yours.

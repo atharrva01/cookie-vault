@@ -251,7 +251,7 @@ Every write action (create/approve/claim/cancel) follows: **building → awaitin
 | Layer | Technology |
 |---|---|
 | On-chain program | Rust + Anchor framework |
-| Program tests | Anchor's TypeScript test harness against a local validator |
+| Program tests | Rust integration tests via `litesvm` (in-process SVM, no validator) — this Anchor version's default; see implementation_plan.md Phase 0 |
 | Frontend | React + TypeScript |
 | Wallet | Nightly (via Solana wallet-adapter) |
 | Chain interaction | Anchor-generated TS client (from program IDL) |
