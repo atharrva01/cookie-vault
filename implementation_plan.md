@@ -160,6 +160,15 @@ One more toolchain gotcha, same family as Phase 0-1's: **two transactions with b
 
 **Test before moving on:** every checkbox in design doc §4.6 has a corresponding passing test. This is the last local-only phase — Phase 5 starts touching the real network.
 
+**Status: done.** `cancel_vault.rs` matches the spec, plus one addition: it also guards `!vault.cancelled` at the top (not just `released_amount == 0`), so a second cancel on an already-cancelled vault fails clean with `VaultCancelled` instead of attempting a pointless zero-balance transfer — added a `double_cancel_fails` test for it. 24 tests passing across the whole suite now.
+
+Two things worth recording about how items 5 and 6 actually turned out:
+- **Item 5 (overflow guard) couldn't be built as an integration test, and that's a good sign, not a gap.** `initialize_vault` requires milestone amounts to sum to exactly `total_amount`, and each milestone/time-lock release can only be claimed once — so `released_amount`'s running total is structurally bounded by `total_amount <= u64::MAX` through every real instruction path. There's no sequence of legitimate transactions that overflows it. Rather than fake an integration scenario, this became a small `#[cfg(test)]` unit test next to the arithmetic in `claim.rs`, documenting *why* `checked_add` is still correct as defense-in-depth even though the invariant already makes overflow unreachable.
+- **Item 6 surfaced a real Anchor ordering fact**: account *existence* is validated for every field before any relational constraint (`has_one`, `address = ...`) runs, regardless of struct declaration order. `cancel_vault_wrong_signer_fails` originally failed with `AccountNotInitialized` instead of `Unauthorized` because the impostor's token account didn't exist yet — not a bug, but it meant the test wasn't actually isolating the `has_one` check it was supposed to prove. Fixed by pre-creating the impostor's (empty) ATA first. Worth remembering for any future "wrong signer" test: every account referenced in the struct needs to actually exist, or you'll test account-existence instead of authorization by accident. Added a `create_ata` helper (creates, doesn't mint) to `tests/common/mod.rs` for this — `create_ata_with_balance` assumes the payer is also the mint authority, which isn't true for an impostor keypair.
+- Also closed a real gap from Phase 3 while doing this pass: `approve_milestone` never had a wrong-signer test. Added `approve_milestone_wrong_signer_fails` to `tests/approve_milestone.rs`.
+
+This is the last phase that only touches `litesvm` — Phase 5 is the first real-network step.
+
 ---
 
 ## Phase 5 — First live deploy to Cookie Chain
