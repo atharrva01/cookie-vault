@@ -62,9 +62,7 @@ pub fn handle_claim(ctx: Context<Claim>, milestone_index: Option<u8>) -> Result<
 
     let amount = match ctx.accounts.vault.condition_type {
         ConditionType::TimeLock => claim_time_lock(&ctx.accounts.vault, milestone_index)?,
-        // Milestone claims land in Phase 3; this match arm exists now so
-        // adding them there is additive rather than a rewrite of `claim`.
-        ConditionType::Milestone => return err!(CookieVaultError::InvalidCondition),
+        ConditionType::Milestone => claim_milestone(&ctx.accounts.vault, milestone_index)?,
     };
 
     let vault = &ctx.accounts.vault;
@@ -102,6 +100,13 @@ pub fn handle_claim(ctx: Context<Claim>, milestone_index: Option<u8>) -> Result<
         .checked_add(amount)
         .ok_or(CookieVaultError::InvalidCondition)?;
 
+    // Only the milestone path has a per-tranche `claimed` flag to set — the
+    // time-lock path uses `released_amount` itself as its completion marker,
+    // and `claim_time_lock` already required `milestone_index.is_none()`.
+    if let Some(index) = milestone_index {
+        ctx.accounts.vault.milestones[index as usize].claimed = true;
+    }
+
     Ok(())
 }
 
@@ -124,4 +129,23 @@ fn claim_time_lock(vault: &Vault, milestone_index: Option<u8>) -> Result<u64> {
     );
 
     Ok(vault.total_amount - vault.released_amount)
+}
+
+/// Validates the milestone claim conditions and returns the amount to
+/// transfer. Mirrors `claim_time_lock`: read-only, the caller applies state
+/// changes (including marking the milestone claimed) once the CPI succeeds.
+fn claim_milestone(vault: &Vault, milestone_index: Option<u8>) -> Result<u64> {
+    let index = milestone_index.ok_or(CookieVaultError::InvalidCondition)?;
+    let milestone = vault
+        .milestones
+        .get(index as usize)
+        .ok_or(CookieVaultError::InvalidCondition)?;
+
+    require!(!milestone.claimed, CookieVaultError::AlreadyClaimed);
+    require!(
+        milestone.approved_by.len() as u8 >= vault.threshold,
+        CookieVaultError::NotApproved
+    );
+
+    Ok(milestone.amount)
 }

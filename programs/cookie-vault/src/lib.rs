@@ -44,10 +44,19 @@ pub mod cookie_vault {
     }
 
     /// Claims released funds. `milestone_index` is required for
-    /// `ConditionType::Milestone` vaults (added in a later phase) and must be
-    /// left unset for `ConditionType::TimeLock`, which releases everything
-    /// at once, once, after `unlock_timestamp`.
+    /// `ConditionType::Milestone` vaults and must be left unset for
+    /// `ConditionType::TimeLock`, which releases everything at once, once,
+    /// after `unlock_timestamp`.
     pub fn claim(ctx: Context<Claim>, milestone_index: Option<u8>) -> Result<()> {
         instructions::claim::handle_claim(ctx, milestone_index)
+    }
+
+    /// Records that `approver` (currently always the depositor —
+    /// `vault.approvers`/`vault.threshold` are the extension point for
+    /// future multi-signature approval) signs off on one milestone. Once a
+    /// milestone's approval count reaches `vault.threshold`, the recipient
+    /// can claim it.
+    pub fn approve_milestone(ctx: Context<ApproveMilestone>, milestone_index: u8) -> Result<()> {
+        instructions::approve_milestone::handle_approve_milestone(ctx, milestone_index)
     }
 }
