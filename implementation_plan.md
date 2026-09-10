@@ -213,6 +213,14 @@ npm install -D vite-plugin-node-polyfills
 
 **Test before moving on:** connect Nightly in the browser, see real address + live COOK balance pulled from `rpc.cookiescan.io`; disconnect/reconnect persists across a page reload.
 
+**Status: done**, verified as far as possible without Nightly actually installed. All planned files exist (`chain.ts`, `wallet.ts`, `WalletContext.tsx`, `WalletButton.tsx`, `index.css`, `idl.ts`, `program.ts`), plus `useWallet.ts` split out as its own hook (oxlint's `only-export-components` flagged the hook and provider sharing a file — a real, if minor, organizational improvement, not just noise-suppression). Verified with a real headless-Chromium pass (Playwright, installed just for this check and removed again afterward — not a project dependency): zero console/page errors, the wallet-picker modal opens and correctly reports "no wallet detected" (accurate, since this container has no extension), screenshots confirm the design tokens render as intended. What's *not* verified, because it can't be from here: an actual Nightly connection, a real balance read, or a signed transaction — that needs your browser.
+
+Deviations from the plan worth knowing about:
+- **`@solana/spl-token` added**, not in the original install list — `program.ts`'s wrapper functions need to derive the vault PDA's and depositor's associated token accounts client-side (mirroring exactly what the Rust tests already do), which needs it.
+- **`idl.ts` also copies `target/types/cookie_vault.ts`**, not just the raw IDL JSON — Anchor generates this companion TS type file alongside the JSON, and using it (`Program<CookieVault>`) gives real compile-time account/instruction typing instead of a loosely-typed `Program<Idl>`. `npm run sync-idl` copies both files now.
+- **`.accountsStrict()` used everywhere**, not `.accounts()`. This Anchor client version has three account-passing methods (`accounts`/`accountsPartial`/`accountsStrict`) with different automatic-PDA/ATA-resolution behavior; `accountsStrict` requires every account explicit and resolves nothing automatically — the safest choice to write against blind, without a browser to verify the resolution logic actually works on this fork.
+- **`@coral-xyz/anchor`'s root-exported `Wallet` is actually the Node-only `NodeWallet` class** (requires a `payer: Keypair`), shadowing the lightweight structural interface `AnchorProvider` actually expects internally. `idl.ts` defines its own local `WalletLike` type instead of importing `Wallet` — TypeScript's structural typing means it satisfies `AnchorProvider`'s constructor without needing Anchor's own (differently-named) type.
+
 ---
 
 ## Phase 7 — Create Vault flow
