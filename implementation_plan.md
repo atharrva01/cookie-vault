@@ -72,7 +72,7 @@ Checked against this machine right now: Node 24.13.1, npm 11.8.0, git 2.34.1, gh
 
 Three toolchain findings worth keeping in view for later phases:
 - **This Anchor fork's `CpiContext::new` takes a `Pubkey` (the target program's ID), not an `AccountInfo`** — a real signature change from mainline Anchor. Every future CPI (`claim`, `approve_milestone`, `cancel_vault`) needs `ctx.accounts.token_program.key()`, not `.to_account_info()`.
-- **`litesvm-token` is unusable here**: it forces `litesvm` from 0.10.0 to 0.16.0, whose `solana-bpf-loader-program` pin requires a nightly-only compiler feature and fails to build on stable. Test SPL setup (mint creation, ATAs, minting) is done by hand instead, using `spl-token-interface`/`spl-associated-token-account-interface` instruction-builders directly against `litesvm 0.10` — see the helpers at the top of `tests/initialize_vault.rs` (`create_mint`, `create_ata_with_balance`) and reuse them in Phase 2-4's tests rather than reintroducing `litesvm-token`.
+- **`litesvm-token` is unusable here**: it forces `litesvm` from 0.10.0 to 0.16.0, whose `solana-bpf-loader-program` pin requires a nightly-only compiler feature and fails to build on stable. Test SPL setup (mint creation, ATAs, minting) is done by hand instead, using `spl-token-interface`/`spl-associated-token-account-interface` instruction-builders directly against `litesvm 0.10` — the shared helpers live in `tests/common/mod.rs` (`create_mint`, `create_ata_with_balance`, `submit`, `assert_error`, `warp_clock`, etc.) and every test file does `mod common; use common::*;` rather than reintroducing `litesvm-token` or copy-pasting setup per file.
 - **IDL generation is currently broken and deferred, not fixed**: `anchor build` (even with the `--arch v1` fix) fails its separate IDL-build pass on the same nightly-only dependency, seemingly because that pass also touches dev-dependencies. `scripts/build.sh` now passes `--no-idl` to keep the program build itself working. **This must be revisited before Phase 6** — the frontend's generated TS client depends on `target/idl/cookie_vault.json` existing. Two untried options at that point: install a nightly toolchain scoped to just the IDL-build step, or re-check whether upstream has published a fixed `solana-syscalls` by then.
 
 ---
@@ -100,6 +100,10 @@ Three toolchain findings worth keeping in view for later phases:
 5. Recipient with no prior ATA for the mint → claim still succeeds (`init_if_needed` path)
 
 **Test before moving on:** all five pass; manually walk Flow A end-to-end in the test log and confirm it matches design doc §3 step by step.
+
+**Status: done.** `instructions/claim.rs` handles the `TimeLock` branch; the `Milestone` match arm is stubbed to return `InvalidCondition` so Phase 3 only adds code, per the plan. Tests 1-5 above are all there (`tests/claim.rs`), plus 4 initialize-vault tests carried over — 9 passing total. Also used Anchor's `has_one = recipient` account constraint for the `Unauthorized` check instead of a manual `require!`, and an `address = vault.mint` constraint on the `mint` account so a client can't pass a mismatched mint — both cheaper and more idiomatic than hand-rolled checks, and consistent with how Anchor expects this to be written.
+
+One more toolchain gotcha, same family as Phase 0-1's: **two transactions with byte-identical instructions submitted on the same blockhash collide** — `litesvm` (matching real Solana behavior) rejects the second as `AlreadyProcessed` before it ever reaches the program, which looks like a false pass/fail depending on what you're testing. The double-claim test needs `svm.expire_blockhash()` between the two submissions so the second transaction actually gets signature-distinct and reaches `claim`'s own `AlreadyClaimed` check. Same thing will matter in Phase 3/4 for `approve_milestone`'s duplicate-approval test and any other "do the same thing twice" test.
 
 ---
 
