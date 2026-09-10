@@ -58,3 +58,10 @@ export function formatUnits(raw: bigint | number | string, decimals: number, max
     .replace(/0+$/, '')
   return `${neg ? '-' : ''}${whole.toLocaleString('en-US')}${frac ? '.' + frac : ''}`
 }
+
+export function fmtUsd(v: number): string {
+  if (!Number.isFinite(v)) return '—'
+  if (v >= 1) return `$${v.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+  if (v >= 0.01) return `$${v.toFixed(3)}`
+  return `$${v.toPrecision(3)}`
+}

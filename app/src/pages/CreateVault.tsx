@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addressUrl, connection, isPubkey, NATIVE_MINT, parseUnits } from '../lib/chain'
 import { resolveMint, type ResolvedMint } from '../lib/das'
+import { looksLikeCookName, resolveRecipientInput, type ResolvedRecipient } from '../lib/cookNames'
 import { buildProvider } from '../lib/idl'
 import { ConditionType, initializeVaultTx, MAX_MILESTONES, vaultPda } from '../lib/program'
 import { sendWithStatus } from '../lib/transact'
@@ -10,6 +11,11 @@ import { useWallet } from '../hooks/useWallet'
 import { PublicKey } from '@solana/web3.js'
 
 type AssetState = { status: 'idle' } | { status: 'loading' } | { status: 'resolved'; resolved: ResolvedMint } | { status: 'invalid' }
+type RecipientState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'resolved'; resolved: ResolvedRecipient }
+  | { status: 'invalid'; message: string }
 type Condition = 'timeLock' | 'milestone'
 
 function newVaultId(): bigint {
@@ -47,6 +53,43 @@ function useAssetResolution(mintInput: string): AssetState {
   return state
 }
 
+/** Debounces `.cook` name / address resolution as the user types. A plain valid address resolves instantly, no debounce needed. */
+function useRecipientResolution(input: string): RecipientState {
+  const [state, setState] = useState<RecipientState>({ status: 'idle' })
+
+  useEffect(() => {
+    const trimmed = input.trim()
+    if (!trimmed) {
+      setState({ status: 'idle' })
+      return
+    }
+    if (isPubkey(trimmed)) {
+      setState({ status: 'resolved', resolved: { address: new PublicKey(trimmed), name: null } })
+      return
+    }
+    if (!looksLikeCookName(trimmed)) {
+      setState({ status: 'invalid', message: 'Enter a wallet address or a .cook name' })
+      return
+    }
+    setState({ status: 'loading' })
+    let cancelled = false
+    const id = setTimeout(() => {
+      resolveRecipientInput(trimmed)
+        .then((resolved) => !cancelled && setState({ status: 'resolved', resolved }))
+        .catch((e: unknown) => {
+          if (cancelled) return
+          setState({ status: 'invalid', message: e instanceof Error ? e.message : String(e) })
+        })
+    }, 350)
+    return () => {
+      cancelled = true
+      clearTimeout(id)
+    }
+  }, [input])
+
+  return state
+}
+
 export default function CreateVault() {
   const { publicKey, sign } = useWallet()
 
@@ -54,6 +97,7 @@ export default function CreateVault() {
   const asset = useAssetResolution(mintInput)
 
   const [recipientInput, setRecipientInput] = useState('')
+  const recipientState = useRecipientResolution(recipientInput)
   const [condition, setCondition] = useState<Condition>('timeLock')
   const [amountInput, setAmountInput] = useState('')
   const [unlockDate, setUnlockDate] = useState('')
@@ -63,7 +107,6 @@ export default function CreateVault() {
   const [formError, setFormError] = useState<string | null>(null)
   const [createdVault, setCreatedVault] = useState<string | null>(null)
 
-  const recipientValid = recipientInput.trim() !== '' && isPubkey(recipientInput.trim())
   const decimals = asset.status === 'resolved' ? asset.resolved.info.decimals : null
 
   const milestoneTotal = useMemo(() => {
@@ -98,11 +141,11 @@ export default function CreateVault() {
       setFormError('Enter a valid token mint address.')
       return
     }
-    if (!recipientValid) {
-      setFormError("Enter the recipient's wallet address.")
+    if (recipientState.status !== 'resolved') {
+      setFormError("Enter the recipient's wallet address or .cook name.")
       return
     }
-    const recipient = new PublicKey(recipientInput.trim())
+    const recipient = recipientState.resolved.address
     const { decimals } = asset.resolved.info
 
     let totalAmount: bigint
@@ -205,15 +248,21 @@ export default function CreateVault() {
         </div>
 
         <div className="field">
-          <label htmlFor="recipient">Recipient address</label>
+          <label htmlFor="recipient">Recipient</label>
           <input
             id="recipient"
             type="text"
             value={recipientInput}
             onChange={(e) => setRecipientInput(e.target.value)}
-            placeholder="Who can claim this vault"
+            placeholder="Wallet address or a .cook name"
           />
-          {recipientInput.trim() !== '' && !recipientValid && <span className="error">Not a valid address.</span>}
+          {recipientState.status === 'loading' && <span className="muted small">Resolving…</span>}
+          {recipientState.status === 'invalid' && <span className="error">{recipientState.message}</span>}
+          {recipientState.status === 'resolved' && recipientState.resolved.name && (
+            <span className="muted small mono">
+              {recipientState.resolved.name} → {recipientState.resolved.address.toBase58()}
+            </span>
+          )}
         </div>
 
         <div className="field">

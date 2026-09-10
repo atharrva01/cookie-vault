@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PublicKey, type Transaction } from '@solana/web3.js'
-import { connection, formatUnits } from '../lib/chain'
+import { connection, fmtUsd, formatUnits } from '../lib/chain'
 import { resolveMint, type ResolvedMint } from '../lib/das'
 import { buildProvider, buildReadOnlyProvider, PROGRAM_ID } from '../lib/idl'
 import { approveMilestoneTx, cancelVaultTx, claimTx, fetchVault, type VaultAccount } from '../lib/program'
+import { fetchVaultActivity, type ActivityEntry } from '../lib/activity'
 import { sendWithStatus } from '../lib/transact'
 import { txErrorMessage, type TxPhase } from '../lib/txStatus'
 import { useWallet } from '../hooks/useWallet'
 import { useNow } from '../hooks/useNow'
 import { useRoute } from '../lib/router'
-import { AddressLink } from '../components/ui'
+import { AddressLink, TxLink } from '../components/ui'
 import { TxStatus } from '../components/TxStatus'
 
-function useVault(pda: PublicKey | null) {
+function useVault(pda: PublicKey | null, reloadKey: number) {
   const [vault, setVault] = useState<VaultAccount | null | undefined>(undefined)
-  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!pda) {
@@ -29,7 +29,25 @@ function useVault(pda: PublicKey | null) {
     }
   }, [pda, reloadKey])
 
-  return { vault, reload: () => setReloadKey((k) => k + 1) }
+  return vault
+}
+
+function useVaultActivity(pda: PublicKey | null, reloadKey: number) {
+  const [activity, setActivity] = useState<ActivityEntry[] | null>(null)
+  useEffect(() => {
+    if (!pda) {
+      setActivity(null)
+      return
+    }
+    let cancelled = false
+    fetchVaultActivity(buildReadOnlyProvider(connection), pda)
+      .then((entries) => !cancelled && setActivity(entries))
+      .catch(() => !cancelled && setActivity([]))
+    return () => {
+      cancelled = true
+    }
+  }, [pda, reloadKey])
+  return activity
 }
 
 export default function VaultDetail() {
@@ -45,7 +63,10 @@ export default function VaultDetail() {
   // headless-browser check, not just by reading the code.
   const pda = useMemo(() => (idParam && isValidPubkey(idParam) ? new PublicKey(idParam) : null), [idParam])
 
-  const { vault, reload } = useVault(pda)
+  const [reloadKey, setReloadKey] = useState(0)
+  const reload = () => setReloadKey((k) => k + 1)
+  const vault = useVault(pda, reloadKey)
+  const activity = useVaultActivity(pda, reloadKey)
   const [asset, setAsset] = useState<ResolvedMint | null>(null)
   const [phase, setPhase] = useState<TxPhase>({ kind: 'idle' })
   const [actionError, setActionError] = useState<string | null>(null)
@@ -80,6 +101,13 @@ export default function VaultDetail() {
 
   const decimals = asset?.info.decimals
   const fmt = (raw: { toString(): string }) => (decimals !== undefined ? formatUnits(raw.toString(), decimals, 4) : raw.toString())
+  // Best-effort market color, not a source of truth — undefined whenever Cookiescan doesn't have a price for this mint.
+  const fmtWithUsd = (raw: { toString(): string }) => {
+    const formatted = fmt(raw)
+    if (decimals === undefined || asset?.info.priceUsd === undefined) return formatted
+    const usd = (Number(raw.toString()) / 10 ** decimals) * asset.info.priceUsd
+    return `${formatted} (${fmtUsd(usd)})`
+  }
   const isDepositor = publicKey?.equals(vault.depositor) ?? false
   const isRecipient = publicKey?.equals(vault.recipient) ?? false
   const isApprover = publicKey ? vault.approvers.some((a) => a.equals(publicKey)) : false
@@ -151,7 +179,7 @@ export default function VaultDetail() {
         <div className="field">
           <label>Total / Released</label>
           <span>
-            {fmt(vault.totalAmount)} / {fmt(vault.releasedAmount)}
+            {fmtWithUsd(vault.totalAmount)} / {fmtWithUsd(vault.releasedAmount)}
           </span>
         </div>
         {vault.cancelled && <p className="error">This vault has been cancelled.</p>}
@@ -223,6 +251,28 @@ export default function VaultDetail() {
           })}
         </div>
       )}
+
+      <div className="card" style={{ marginTop: 20 }}>
+        <h2>Activity</h2>
+        {activity === null && <p className="muted small">Loading…</p>}
+        {activity?.length === 0 && <p className="muted small">No activity yet.</p>}
+        {activity && activity.length > 0 && (
+          <div>
+            {activity.map((entry) => (
+              <div
+                key={entry.signature}
+                style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--line)' }}
+              >
+                <span>{entry.label}</span>
+                <span className="muted small">
+                  {entry.blockTime ? new Date(entry.blockTime * 1000).toLocaleString() : `slot ${entry.slot}`} ·{' '}
+                  <TxLink signature={entry.signature} />
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {actionError && <p className="error">{actionError}</p>}
       <TxStatus phase={phase} />

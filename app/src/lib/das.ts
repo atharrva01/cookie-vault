@@ -16,6 +16,8 @@ export interface TokenInfo {
   name: string
   decimals: number
   logoUri?: string
+  /** USD price per whole token, when Cookiescan has one. Best-effort market color, not a guarantee. */
+  priceUsd?: number
 }
 
 export const COOK_TOKEN: TokenInfo = {
@@ -28,6 +30,7 @@ export const COOK_TOKEN: TokenInfo = {
 interface DasRegistryEntry {
   mint: string
   metadata?: { name?: string; symbol?: string; logo?: string; decimals?: number }
+  price?: { usd?: string | number }
 }
 
 let registryPromise: Promise<Map<string, TokenInfo>> | null = null
@@ -47,6 +50,7 @@ function loadRegistry(): Promise<Map<string, TokenInfo>> {
         name: entry.metadata.name || 'Unknown token',
         decimals: entry.metadata.decimals,
         logoUri: entry.metadata.logo || undefined,
+        priceUsd: entry.price?.usd !== undefined ? Number(entry.price.usd) : undefined,
       })
     }
     return byMint
@@ -55,6 +59,20 @@ function loadRegistry(): Promise<Map<string, TokenInfo>> {
     throw e
   })
   return registryPromise
+}
+
+let cookPricePromise: Promise<number | null> | null = null
+
+/** COOK's own USD price — it isn't an SPL token in the registry (it's the chain's native gas token), so it needs its own endpoint. */
+function fetchCookUsdPrice(): Promise<number | null> {
+  cookPricePromise ??= fetch(`${DAS_API_URL}/api/price/cook`)
+    .then((res) => res.json() as Promise<{ data?: { price?: { usd?: number } } }>)
+    .then((json) => {
+      const usd = json.data?.price?.usd
+      return typeof usd === 'number' && usd > 0 ? usd : null
+    })
+    .catch(() => null)
+  return cookPricePromise
 }
 
 export interface ResolvedMint {
@@ -77,7 +95,10 @@ const mintCache = new Map<string, Promise<ResolvedMint>>()
  * before the user ever gets to signing, not just an unregistered mint.
  */
 export async function resolveMint(mintAddress: string): Promise<ResolvedMint | null> {
-  if (mintAddress === NATIVE_MINT) return { info: COOK_TOKEN, tokenProgram: TOKEN_PROGRAM_ID }
+  if (mintAddress === NATIVE_MINT) {
+    const priceUsd = (await fetchCookUsdPrice()) ?? undefined
+    return { info: { ...COOK_TOKEN, priceUsd }, tokenProgram: TOKEN_PROGRAM_ID }
+  }
 
   try {
     new PublicKey(mintAddress)

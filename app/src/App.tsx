@@ -7,6 +7,7 @@ import { navigate, useRoute } from './lib/router'
 import CreateVault from './pages/CreateVault'
 import MyVaults from './pages/MyVaults'
 import VaultDetail from './pages/VaultDetail'
+import Analytics from './pages/Analytics'
 
 function useChainUp(): boolean {
   const [up, setUp] = useState(true)
@@ -53,6 +54,7 @@ function Topbar() {
       <nav style={{ display: 'flex', gap: 14 }}>
         <NavLink to="/vaults">My Vaults</NavLink>
         <NavLink to="/create">Create Vault</NavLink>
+        <NavLink to="/analytics">Analytics</NavLink>
       </nav>
       <div className="topbar-right">
         <span className={`chain-badge${up ? '' : ' down'}`}>
@@ -115,6 +117,8 @@ function Routes() {
       return <MyVaults />
     case '/vault':
       return <VaultDetail />
+    case '/analytics':
+      return <Analytics />
     default:
       return <NotFound />
   }
