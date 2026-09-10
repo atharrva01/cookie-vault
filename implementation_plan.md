@@ -137,6 +137,8 @@ One more toolchain gotcha, same family as Phase 0-1's: **two transactions with b
 
 **Test before moving on:** all pass; this is the point where the pitch ("programmable escrow, not a timelock") is actually demonstrable — worth manually narrating a full Flow B run in the terminal output as a sanity check before moving on, since this is the scene you'll later re-shoot for the X thread demo.
 
+**Status: done.** Both pieces built exactly as scoped — `approve_milestone.rs` is new, `claim.rs`'s milestone branch filled in the stub left by Phase 2, no restructuring needed. `vault.approvers.contains(&approver)` stands in for `has_one` here since `approvers` is a `Vec`, not a single field — `has_one` only applies to single-`Pubkey` fields, so this is the correct manual check, not a shortcut. 15 tests passing total: the 5 planned above (`milestone_flow_end_to_end` covers #1 by looping all three tranches, not just milestone 1, and cross-checks that unclaimed milestones stay untouched at every step) plus a 6th added the same way Phase 1 added a milestone happy-path test — `approve_milestone` has its own bounds check on `milestone_index`, so it gets its own out-of-range test rather than relying on `claim`'s to stand in for it. The `expire_blockhash()` gotcha from Phase 2 showed up again exactly where expected (`approve_milestone_twice_by_same_signer_fails`, the second `claim` in the double-claim test) — no new toolchain surprises this phase.
+
 ---
 
 ## Phase 4 — `cancel_vault` + full §4.6 hardening pass
