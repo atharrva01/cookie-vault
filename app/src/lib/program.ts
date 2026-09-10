@@ -1,0 +1,156 @@
+// Thin wrappers around the Anchor-generated client — pages call these, never
+// `program.methods.*` directly, so instruction/account wiring lives in one
+// place. `.accountsStrict()` is used throughout (not `.accounts()`) so every
+// account is always explicit here rather than relying on the client's
+// automatic PDA/ATA resolution, which isn't worth trusting blind on a fork
+// this new without a browser to verify it against.
+import { Buffer } from 'buffer'
+import { BN, type AnchorProvider } from '@coral-xyz/anchor'
+import { PublicKey, SystemProgram } from '@solana/web3.js'
+import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token'
+import { PROGRAM_ID, getProgram } from './idl'
+
+export type ConditionType = { timeLock: Record<string, never> } | { milestone: Record<string, never> }
+export const ConditionType = {
+  TimeLock: { timeLock: {} } as ConditionType,
+  Milestone: { milestone: {} } as ConditionType,
+}
+
+export interface VaultAccount {
+  depositor: PublicKey
+  recipient: PublicKey
+  mint: PublicKey
+  vaultId: BN
+  conditionType: ConditionType
+  totalAmount: BN
+  releasedAmount: BN
+  unlockTimestamp: BN | null
+  milestones: { amount: BN; approvedBy: PublicKey[]; claimed: boolean }[]
+  approvers: PublicKey[]
+  threshold: number
+  cancelled: boolean
+  bump: number
+}
+
+const VAULT_SEED = Buffer.from('vault')
+
+export function vaultPda(depositor: PublicKey, recipient: PublicKey, vaultId: bigint): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [VAULT_SEED, depositor.toBuffer(), recipient.toBuffer(), new BN(vaultId.toString()).toArrayLike(Buffer, 'le', 8)],
+    PROGRAM_ID,
+  )
+}
+
+/** The vault's own ATA — `allowOwnerOffCurve: true` because a PDA isn't a real keypair-backed account. */
+export function vaultTokenAccount(vault: PublicKey, mint: PublicKey): PublicKey {
+  return getAssociatedTokenAddressSync(mint, vault, true)
+}
+
+interface InitializeVaultArgs {
+  vaultId: bigint
+  depositor: PublicKey
+  recipient: PublicKey
+  mint: PublicKey
+  conditionType: ConditionType
+  totalAmount: bigint
+  unlockTimestamp?: bigint | null
+  milestoneAmounts?: bigint[] | null
+}
+
+export async function initializeVault(provider: AnchorProvider, args: InitializeVaultArgs): Promise<string> {
+  const program = getProgram(provider)
+  const [vault] = vaultPda(args.depositor, args.recipient, args.vaultId)
+  const depositorTokenAccount = getAssociatedTokenAddressSync(args.mint, args.depositor)
+  const vaultTokenAcct = vaultTokenAccount(vault, args.mint)
+
+  return program.methods
+    .initializeVault(
+      new BN(args.vaultId.toString()),
+      args.recipient,
+      args.conditionType,
+      new BN(args.totalAmount.toString()),
+      args.unlockTimestamp != null ? new BN(args.unlockTimestamp.toString()) : null,
+      args.milestoneAmounts ? args.milestoneAmounts.map((a) => new BN(a.toString())) : null,
+    )
+    .accountsStrict({
+      depositor: args.depositor,
+      vault,
+      mint: args.mint,
+      depositorTokenAccount,
+      vaultTokenAccount: vaultTokenAcct,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc()
+}
+
+interface ClaimArgs {
+  vault: PublicKey
+  recipient: PublicKey
+  mint: PublicKey
+  milestoneIndex?: number | null
+}
+
+export async function claim(provider: AnchorProvider, args: ClaimArgs): Promise<string> {
+  const program = getProgram(provider)
+  const vaultTokenAcct = vaultTokenAccount(args.vault, args.mint)
+  const recipientTokenAccount = getAssociatedTokenAddressSync(args.mint, args.recipient)
+
+  return program.methods
+    .claim(args.milestoneIndex ?? null)
+    .accountsStrict({
+      recipient: args.recipient,
+      vault: args.vault,
+      mint: args.mint,
+      vaultTokenAccount: vaultTokenAcct,
+      recipientTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc()
+}
+
+export async function approveMilestone(
+  provider: AnchorProvider,
+  vault: PublicKey,
+  approver: PublicKey,
+  milestoneIndex: number,
+): Promise<string> {
+  const program = getProgram(provider)
+  return program.methods.approveMilestone(milestoneIndex).accountsStrict({ approver, vault }).rpc()
+}
+
+interface CancelVaultArgs {
+  vault: PublicKey
+  depositor: PublicKey
+  mint: PublicKey
+}
+
+export async function cancelVault(provider: AnchorProvider, args: CancelVaultArgs): Promise<string> {
+  const program = getProgram(provider)
+  const vaultTokenAcct = vaultTokenAccount(args.vault, args.mint)
+  const depositorTokenAccount = getAssociatedTokenAddressSync(args.mint, args.depositor)
+
+  return program.methods
+    .cancelVault()
+    .accountsStrict({
+      depositor: args.depositor,
+      vault: args.vault,
+      mint: args.mint,
+      vaultTokenAccount: vaultTokenAcct,
+      depositorTokenAccount,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .rpc()
+}
+
+export async function fetchVault(provider: AnchorProvider, vault: PublicKey): Promise<VaultAccount | null> {
+  const program = getProgram(provider)
+  try {
+    return (await program.account.vault.fetch(vault)) as unknown as VaultAccount
+  } catch {
+    return null
+  }
+}
