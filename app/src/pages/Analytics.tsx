@@ -47,7 +47,7 @@ function BarChart({ data }: { data: BarDatum[] }) {
 
 function StatTile({ label, value, tone }: { label: string; value: number; tone?: 'ok' | 'muted' | 'accent' }) {
   return (
-    <div className="stat-tile card">
+    <div className="stat-cell">
       <div className="muted small">{label}</div>
       <div className={`stat-tile-value${tone ? ` ${tone}` : ''}`}>{value}</div>
     </div>
@@ -116,7 +116,7 @@ export default function Analytics() {
       <h1>Analytics</h1>
       <p className="lead">Every vault Cookie Vault has ever created on Cookie Chain, not just yours.</p>
 
-      <div className="stat-grid">
+      <div className="stat-ledger">
         <StatTile label="Total vaults" value={stats.totalVaults} />
         <StatTile label="Active" value={stats.active} tone="accent" />
         <StatTile label="Released" value={stats.fullyReleased} tone="ok" />
