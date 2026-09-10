@@ -47,10 +47,19 @@ function BarChart({ data }: { data: BarDatum[] }) {
 
 function StatTile({ label, value, tone }: { label: string; value: number; tone?: 'ok' | 'muted' | 'accent' }) {
   return (
-    <div className="stat-cell">
+    <div className={`stat-cell${tone ? ` tone-${tone}` : ''}`}>
       <div className="muted small">{label}</div>
       <div className={`stat-tile-value${tone ? ` ${tone}` : ''}`}>{value}</div>
     </div>
+  )
+}
+
+function EmptyVaultIcon() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+      <rect x="4" y="10" width="16" height="10" rx="1" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    </svg>
   )
 }
 
@@ -119,17 +128,20 @@ export default function Analytics() {
       <div className="stat-ledger">
         <StatTile label="Total vaults" value={stats.totalVaults} />
         <StatTile label="Active" value={stats.active} tone="accent" />
-        <StatTile label="Released" value={stats.fullyReleased} tone="ok" />
+        <StatTile label="Released" value={stats.fullyReleased} tone="accent" />
         <StatTile label="Cancelled" value={stats.cancelled} tone="muted" />
       </div>
 
-      <div className="card" style={{ marginTop: 20, marginBottom: 20 }}>
+      <div className="card" style={{ marginTop: 16, marginBottom: 16 }}>
         <div className="analytics-chart-head">
           <h2>Status breakdown</h2>
           <span className="muted small">Claim rate: {claimRateLabel}</span>
         </div>
         {stats.totalVaults === 0 ? (
-          <p className="muted small">No vaults created yet.</p>
+          <div className="empty-state">
+            <EmptyVaultIcon />
+            <p className="muted small">No vaults created yet.</p>
+          </div>
         ) : (
           <BarChart data={chartData} />
         )}

@@ -34,7 +34,7 @@ export function CopyField({ value, label }: { value: string; label?: string }) {
 export function AddressLink({ address, name }: { address: string; name?: string | null }) {
   return (
     <a className="mono" href={addressUrl(address)} target="_blank" rel="noreferrer" title={address}>
-      {name ? `${name} (${shortAddr(address)})` : shortAddr(address, 6)}
+      {name ? `${name} (${shortAddr(address)})` : shortAddr(address, 8)}
     </a>
   )
 }

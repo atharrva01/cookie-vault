@@ -23,10 +23,11 @@ function newVaultId(): bigint {
 }
 
 function SummaryRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const isUnset = children === 'Not set'
   return (
     <div className="summary-row">
       <span className="muted small">{label}</span>
-      <span>{children}</span>
+      <span className={isUnset ? 'muted' : 'summary-value'}>{children}</span>
     </div>
   )
 }
@@ -302,7 +303,7 @@ export default function CreateVault() {
             )}
           </div>
 
-          <div className="field">
+          <div className="field field-group-start">
             <label>Release condition</label>
             <div className="segmented" role="radiogroup" aria-label="Release condition">
               <button
@@ -388,7 +389,7 @@ export default function CreateVault() {
           <button type="submit" className="primary" disabled={submitting || !publicKey}>
             {submitting ? 'Working…' : 'Create vault'}
           </button>
-          {!publicKey && <p className="muted small">Connect a wallet to create a vault.</p>}
+          {!publicKey && <div className="callout">Connect a wallet to create a vault.</div>}
         </form>
       </div>
 
