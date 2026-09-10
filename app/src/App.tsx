@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { WalletProvider } from './components/WalletContext'
 import { WalletButton } from './components/WalletButton'
+import { AddressLink } from './components/ui'
 import { connection } from './lib/chain'
+import { PROGRAM_ID } from './lib/idl'
 import { isMockMode } from './lib/mock'
 import { navigate, useRoute } from './lib/router'
 import CreateVault from './pages/CreateVault'
@@ -90,12 +92,14 @@ function Topbar() {
         <WalletButton />
         <button
           type="button"
-          className="ghost sm nav-toggle"
+          className={`nav-toggle${menuOpen ? ' open' : ''}`}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((v) => !v)}
         >
-          {menuOpen ? '✕' : '☰'}
+          <span />
+          <span />
+          <span />
         </button>
       </div>
     </header>
@@ -214,14 +218,28 @@ function NotFound() {
 function Footer() {
   return (
     <footer className="site-footer">
-      Cookie Vault is open source.{' '}
-      <a href="https://github.com/atharrva01/cookie-vault" target="_blank" rel="noreferrer">
-        View on GitHub
-      </a>
-      {' · '}
-      <a href="https://docs.cookiechain.wtf" target="_blank" rel="noreferrer">
-        Cookie Chain docs
-      </a>
+      <div className="site-footer-inner">
+        <div className="site-footer-brand">
+          <span className="brand-mark" aria-hidden>
+            C
+          </span>
+          <div>
+            <div className="site-footer-name">Cookie Vault</div>
+            <div>Programmable token escrow for Cookie Chain</div>
+          </div>
+        </div>
+        <div className="site-footer-links">
+          <a href="https://github.com/atharrva01/cookie-vault" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+          <a href="https://docs.cookiechain.wtf" target="_blank" rel="noreferrer">
+            Cookie Chain docs
+          </a>
+          <span>
+            Program: <AddressLink address={PROGRAM_ID.toBase58()} />
+          </span>
+        </div>
+      </div>
     </footer>
   )
 }

@@ -45,6 +45,15 @@ function BarChart({ data }: { data: BarDatum[] }) {
   )
 }
 
+function StatTile({ label, value, tone }: { label: string; value: number; tone?: 'ok' | 'muted' | 'accent' }) {
+  return (
+    <div className="stat-tile card">
+      <div className="muted small">{label}</div>
+      <div className={`stat-tile-value${tone ? ` ${tone}` : ''}`}>{value}</div>
+    </div>
+  )
+}
+
 function useVaultStats() {
   const [stats, setStats] = useState<VaultStats | null | undefined>(undefined)
   useEffect(() => {
@@ -97,6 +106,7 @@ export default function Analytics() {
     { label: 'Released', value: stats.fullyReleased, color: 'var(--ok)' },
     { label: 'Cancelled', value: stats.cancelled, color: 'var(--muted)' },
   ]
+  const claimRateLabel = stats.totalVaults > 0 ? `${Math.round((stats.fullyReleased / stats.totalVaults) * 100)}%` : 'N/A'
 
   let knownUsd = 0
   let hasUnknownPrice = false
@@ -106,20 +116,23 @@ export default function Analytics() {
       <h1>Analytics</h1>
       <p className="lead">Every vault Cookie Vault has ever created on Cookie Chain, not just yours.</p>
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', marginBottom: 20 }}>
-          <div>
-            <div className="muted small">Total vaults</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{stats.totalVaults}</div>
-          </div>
-          <div>
-            <div className="muted small">Claim rate</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>
-              {stats.totalVaults > 0 ? `${Math.round((stats.fullyReleased / stats.totalVaults) * 100)}%` : 'N/A'}
-            </div>
-          </div>
+      <div className="stat-grid">
+        <StatTile label="Total vaults" value={stats.totalVaults} />
+        <StatTile label="Active" value={stats.active} tone="accent" />
+        <StatTile label="Released" value={stats.fullyReleased} tone="ok" />
+        <StatTile label="Cancelled" value={stats.cancelled} tone="muted" />
+      </div>
+
+      <div className="card" style={{ marginTop: 20, marginBottom: 20 }}>
+        <div className="analytics-chart-head">
+          <h2>Status breakdown</h2>
+          <span className="muted small">Claim rate: {claimRateLabel}</span>
         </div>
-        <BarChart data={chartData} />
+        {stats.totalVaults === 0 ? (
+          <p className="muted small">No vaults created yet.</p>
+        ) : (
+          <BarChart data={chartData} />
+        )}
       </div>
 
       <div className="card">
@@ -132,7 +145,7 @@ export default function Analytics() {
           if (usd !== undefined) knownUsd += usd
           else hasUnknownPrice = true
           return (
-            <div key={mint.toBase58()} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
+            <div key={mint.toBase58()} className="data-row">
               <span>{info ? `${info.name} (${info.symbol})` : shortAddr(mint.toBase58())}</span>
               <span>
                 {amount} {info?.symbol ?? ''}

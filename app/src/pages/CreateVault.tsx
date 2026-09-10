@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { addressUrl, connection, isPubkey, NATIVE_MINT, parseUnits } from '../lib/chain'
+import { addressUrl, connection, isPubkey, NATIVE_MINT, parseUnits, shortAddr } from '../lib/chain'
 import { resolveMint, type ResolvedMint } from '../lib/das'
 import { looksLikeCookName, resolveRecipientInput, type ResolvedRecipient } from '../lib/cookNames'
 import { buildProvider } from '../lib/idl'
@@ -20,6 +20,15 @@ type Condition = 'timeLock' | 'milestone'
 
 function newVaultId(): bigint {
   return BigInt(Date.now())
+}
+
+function SummaryRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="summary-row">
+      <span className="muted small">{label}</span>
+      <span>{children}</span>
+    </div>
+  )
 }
 
 /** Debounces mint resolution as the user types instead of firing on every keystroke. */
@@ -217,144 +226,186 @@ export default function CreateVault() {
 
   const submitting = phase.kind !== 'idle' && phase.kind !== 'confirmed' && phase.kind !== 'failed'
 
+  const assetSymbol = asset.status === 'resolved' ? asset.resolved.info.symbol : ''
+  const assetLabel =
+    asset.status === 'resolved'
+      ? assetSymbol
+      : asset.status === 'loading'
+        ? 'Resolving…'
+        : asset.status === 'invalid'
+          ? 'Invalid mint'
+          : 'Not set'
+  const recipientLabel =
+    recipientState.status === 'resolved'
+      ? (recipientState.resolved.name ?? shortAddr(recipientState.resolved.address.toBase58()))
+      : recipientState.status === 'loading'
+        ? 'Resolving…'
+        : recipientState.status === 'invalid'
+          ? 'Invalid'
+          : 'Not set'
+  const amountLabel =
+    condition === 'timeLock'
+      ? amountInput.trim()
+        ? `${amountInput} ${assetSymbol}`.trim()
+        : 'Not set'
+      : milestoneTotal !== null && decimals !== null
+        ? `${(Number(milestoneTotal) / 10 ** decimals).toLocaleString()} ${assetSymbol}`.trim()
+        : 'Not set'
+  const milestoneCount = milestoneInputs.filter((r) => r.trim() !== '').length
+
   return (
-    <main className="page narrow">
-      <h1>Create a vault</h1>
-      <p className="lead">
-        Lock tokens now, release them to the recipient on a date, or milestone-by-milestone as you approve each
-        one.
-      </p>
+    <main className="create-page">
+      <div>
+        <h1>Create a vault</h1>
+        <p className="lead">
+          Lock tokens now, release them to the recipient on a date, or milestone-by-milestone as you approve each
+          one.
+        </p>
 
-      <form className="card" onSubmit={(e) => void handleSubmit(e)}>
-        <div className="field">
-          <label htmlFor="mint">Asset (mint address)</label>
-          <input
-            id="mint"
-            type="text"
-            value={mintInput}
-            onChange={(e) => setMintInput(e.target.value)}
-            placeholder="Token mint address"
-          />
-          {asset.status === 'loading' && <span className="muted small">Resolving…</span>}
-          {asset.status === 'invalid' && <span className="error">Not a recognized token mint on Cookie Chain.</span>}
-          {asset.status === 'resolved' && (
-            <div className="asset-preview">
-              {asset.resolved.info.logoUri && <img src={asset.resolved.info.logoUri} alt="" />}
-              <span>
-                {asset.resolved.info.name} ({asset.resolved.info.symbol})
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="field">
-          <label htmlFor="recipient">Recipient</label>
-          <input
-            id="recipient"
-            type="text"
-            value={recipientInput}
-            onChange={(e) => setRecipientInput(e.target.value)}
-            placeholder="Wallet address or a .cook name"
-          />
-          {recipientState.status === 'loading' && <span className="muted small">Resolving…</span>}
-          {recipientState.status === 'invalid' && <span className="error">{recipientState.message}</span>}
-          {recipientState.status === 'resolved' && recipientState.resolved.name && (
-            <span className="muted small mono">
-              {recipientState.resolved.name} → {recipientState.resolved.address.toBase58()}
-            </span>
-          )}
-        </div>
-
-        <div className="field">
-          <label>Release condition</label>
-          <div className="radio-row">
-            <label>
-              <input
-                type="radio"
-                name="condition"
-                checked={condition === 'timeLock'}
-                onChange={() => setCondition('timeLock')}
-              />
-              Time lock
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="condition"
-                checked={condition === 'milestone'}
-                onChange={() => setCondition('milestone')}
-              />
-              Milestones
-            </label>
-          </div>
-        </div>
-
-        {condition === 'timeLock' ? (
-          <>
-            <div className="field">
-              <label htmlFor="amount">Amount</label>
-              <input
-                id="amount"
-                type="text"
-                inputMode="decimal"
-                value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
-                placeholder="0.0"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="unlock-date">Unlock date</label>
-              <input id="unlock-date" type="date" value={unlockDate} onChange={(e) => setUnlockDate(e.target.value)} />
-            </div>
-          </>
-        ) : (
+        <form className="card" onSubmit={(e) => void handleSubmit(e)}>
           <div className="field">
-            <label>Milestone amounts</label>
-            {milestoneInputs.map((value, i) => (
-              <div className="milestone-row" key={i}>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={value}
-                  onChange={(e) => updateMilestone(i, e.target.value)}
-                  placeholder={`Milestone ${i + 1}`}
-                />
-                {milestoneInputs.length > 1 && (
-                  <button type="button" className="ghost sm" onClick={() => removeMilestone(i)}>
-                    Remove
-                  </button>
-                )}
+            <label htmlFor="mint">Asset (mint address)</label>
+            <input
+              id="mint"
+              type="text"
+              value={mintInput}
+              onChange={(e) => setMintInput(e.target.value)}
+              placeholder="Token mint address"
+            />
+            {asset.status === 'loading' && <span className="muted small">Resolving…</span>}
+            {asset.status === 'invalid' && <span className="error">Not a recognized token mint on Cookie Chain.</span>}
+            {asset.status === 'resolved' && (
+              <div className="asset-preview">
+                {asset.resolved.info.logoUri && <img src={asset.resolved.info.logoUri} alt="" />}
+                <span>
+                  {asset.resolved.info.name} ({asset.resolved.info.symbol})
+                </span>
               </div>
-            ))}
-            <button type="button" className="ghost sm" onClick={addMilestone} disabled={milestoneInputs.length >= MAX_MILESTONES}>
-              + Add milestone
-            </button>
-            {milestoneTotal !== null && decimals !== null && (
-              <p className="muted small">
-                Total to lock: {(Number(milestoneTotal) / 10 ** decimals).toLocaleString()}{' '}
-                {asset.status === 'resolved' ? asset.resolved.info.symbol : ''}
-              </p>
             )}
           </div>
+
+          <div className="field">
+            <label htmlFor="recipient">Recipient</label>
+            <input
+              id="recipient"
+              type="text"
+              value={recipientInput}
+              onChange={(e) => setRecipientInput(e.target.value)}
+              placeholder="Wallet address or a .cook name"
+            />
+            {recipientState.status === 'loading' && <span className="muted small">Resolving…</span>}
+            {recipientState.status === 'invalid' && <span className="error">{recipientState.message}</span>}
+            {recipientState.status === 'resolved' && recipientState.resolved.name && (
+              <span className="muted small mono">
+                {recipientState.resolved.name} → {recipientState.resolved.address.toBase58()}
+              </span>
+            )}
+          </div>
+
+          <div className="field">
+            <label>Release condition</label>
+            <div className="segmented" role="radiogroup" aria-label="Release condition">
+              <button
+                type="button"
+                className={`segmented-btn${condition === 'timeLock' ? ' active' : ''}`}
+                aria-pressed={condition === 'timeLock'}
+                onClick={() => setCondition('timeLock')}
+              >
+                Time lock
+              </button>
+              <button
+                type="button"
+                className={`segmented-btn${condition === 'milestone' ? ' active' : ''}`}
+                aria-pressed={condition === 'milestone'}
+                onClick={() => setCondition('milestone')}
+              >
+                Milestones
+              </button>
+            </div>
+          </div>
+
+          {condition === 'timeLock' ? (
+            <>
+              <div className="field">
+                <label htmlFor="amount">Amount</label>
+                <input
+                  id="amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={amountInput}
+                  onChange={(e) => setAmountInput(e.target.value)}
+                  placeholder="0.0"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="unlock-date">Unlock date</label>
+                <input id="unlock-date" type="date" value={unlockDate} onChange={(e) => setUnlockDate(e.target.value)} />
+              </div>
+            </>
+          ) : (
+            <div className="field">
+              <label>Milestone amounts</label>
+              {milestoneInputs.map((value, i) => (
+                <div className="milestone-row" key={i}>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={value}
+                    onChange={(e) => updateMilestone(i, e.target.value)}
+                    placeholder={`Milestone ${i + 1}`}
+                  />
+                  {milestoneInputs.length > 1 && (
+                    <button type="button" className="ghost sm" onClick={() => removeMilestone(i)}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button type="button" className="ghost sm" onClick={addMilestone} disabled={milestoneInputs.length >= MAX_MILESTONES}>
+                + Add milestone
+              </button>
+              {milestoneTotal !== null && decimals !== null && (
+                <p className="muted small">
+                  Total to lock: {(Number(milestoneTotal) / 10 ** decimals).toLocaleString()}{' '}
+                  {asset.status === 'resolved' ? asset.resolved.info.symbol : ''}
+                </p>
+              )}
+            </div>
+          )}
+
+          {formError && <p className="error">{formError}</p>}
+          <TxStatus phase={phase} />
+
+          {createdVault && phase.kind === 'confirmed' && (
+            <p className="ok small">
+              Vault created:{' '}
+              <a href={addressUrl(createdVault)} target="_blank" rel="noreferrer" className="mono">
+                {createdVault}
+              </a>
+            </p>
+          )}
+
+          <button type="submit" className="primary" disabled={submitting || !publicKey}>
+            {submitting ? 'Working…' : 'Create vault'}
+          </button>
+          {!publicKey && <p className="muted small">Connect a wallet to create a vault.</p>}
+        </form>
+      </div>
+
+      <aside className="summary-panel card">
+        <h2 className="summary-heading">Summary</h2>
+        <SummaryRow label="Asset">{assetLabel}</SummaryRow>
+        <SummaryRow label="Recipient">{recipientLabel}</SummaryRow>
+        <SummaryRow label="Condition">{condition === 'timeLock' ? 'Time lock' : 'Milestones'}</SummaryRow>
+        <SummaryRow label="Amount">{amountLabel}</SummaryRow>
+        {condition === 'timeLock' ? (
+          <SummaryRow label="Unlocks">
+            {unlockDate ? new Date(`${unlockDate}T00:00:00Z`).toLocaleDateString() : 'Not set'}
+          </SummaryRow>
+        ) : (
+          <SummaryRow label="Milestones">{milestoneCount > 0 ? milestoneCount : 'Not set'}</SummaryRow>
         )}
-
-        {formError && <p className="error">{formError}</p>}
-        <TxStatus phase={phase} />
-
-        {createdVault && phase.kind === 'confirmed' && (
-          <p className="ok small">
-            Vault created:{' '}
-            <a href={addressUrl(createdVault)} target="_blank" rel="noreferrer" className="mono">
-              {createdVault}
-            </a>
-          </p>
-        )}
-
-        <button type="submit" className="primary" disabled={submitting || !publicKey}>
-          {submitting ? 'Working…' : 'Create vault'}
-        </button>
-        {!publicKey && <p className="muted small">Connect a wallet to create a vault.</p>}
-      </form>
+      </aside>
     </main>
   )
 }
