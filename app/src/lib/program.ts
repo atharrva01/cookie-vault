@@ -4,11 +4,26 @@
 // account is always explicit here rather than relying on the client's
 // automatic PDA/ATA resolution, which isn't worth trusting blind on a fork
 // this new without a browser to verify it against.
+//
+// Each of these returns an unsigned `Transaction`, not a submitted
+// signature — callers drive it through `sendWithStatus` (transact.ts) so
+// the UI can show building/awaiting-signature/submitted/confirmed as their
+// own distinct moments (design_doc.md §5), instead of Anchor's `.rpc()`
+// collapsing all of that into one opaque await.
 import { Buffer } from 'buffer'
 import { BN, type AnchorProvider } from '@coral-xyz/anchor'
-import { PublicKey, SystemProgram } from '@solana/web3.js'
+import { PublicKey, SystemProgram, type Transaction } from '@solana/web3.js'
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token'
 import { PROGRAM_ID, getProgram } from './idl'
+import idlJson from '../idl/cookie_vault.json'
+
+/** Read from the IDL (itself generated from `constants.rs`) rather than hardcoded, so it can't drift from the program. */
+function idlConstant(name: string): number {
+  const entry = idlJson.constants.find((c) => c.name === name)
+  if (!entry) throw new Error(`IDL is missing expected constant ${name}`)
+  return Number(entry.value)
+}
+export const MAX_MILESTONES = idlConstant('MAX_MILESTONES')
 
 export type ConditionType = { timeLock: Record<string, never> } | { milestone: Record<string, never> }
 export const ConditionType = {
@@ -57,7 +72,7 @@ interface InitializeVaultArgs {
   milestoneAmounts?: bigint[] | null
 }
 
-export async function initializeVault(provider: AnchorProvider, args: InitializeVaultArgs): Promise<string> {
+export async function initializeVaultTx(provider: AnchorProvider, args: InitializeVaultArgs): Promise<Transaction> {
   const program = getProgram(provider)
   const [vault] = vaultPda(args.depositor, args.recipient, args.vaultId)
   const depositorTokenAccount = getAssociatedTokenAddressSync(args.mint, args.depositor)
@@ -82,7 +97,7 @@ export async function initializeVault(provider: AnchorProvider, args: Initialize
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     })
-    .rpc()
+    .transaction()
 }
 
 interface ClaimArgs {
@@ -92,7 +107,7 @@ interface ClaimArgs {
   milestoneIndex?: number | null
 }
 
-export async function claim(provider: AnchorProvider, args: ClaimArgs): Promise<string> {
+export async function claimTx(provider: AnchorProvider, args: ClaimArgs): Promise<Transaction> {
   const program = getProgram(provider)
   const vaultTokenAcct = vaultTokenAccount(args.vault, args.mint)
   const recipientTokenAccount = getAssociatedTokenAddressSync(args.mint, args.recipient)
@@ -109,17 +124,17 @@ export async function claim(provider: AnchorProvider, args: ClaimArgs): Promise<
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     })
-    .rpc()
+    .transaction()
 }
 
-export async function approveMilestone(
+export async function approveMilestoneTx(
   provider: AnchorProvider,
   vault: PublicKey,
   approver: PublicKey,
   milestoneIndex: number,
-): Promise<string> {
+): Promise<Transaction> {
   const program = getProgram(provider)
-  return program.methods.approveMilestone(milestoneIndex).accountsStrict({ approver, vault }).rpc()
+  return program.methods.approveMilestone(milestoneIndex).accountsStrict({ approver, vault }).transaction()
 }
 
 interface CancelVaultArgs {
@@ -128,7 +143,7 @@ interface CancelVaultArgs {
   mint: PublicKey
 }
 
-export async function cancelVault(provider: AnchorProvider, args: CancelVaultArgs): Promise<string> {
+export async function cancelVaultTx(provider: AnchorProvider, args: CancelVaultArgs): Promise<Transaction> {
   const program = getProgram(provider)
   const vaultTokenAcct = vaultTokenAccount(args.vault, args.mint)
   const depositorTokenAccount = getAssociatedTokenAddressSync(args.mint, args.depositor)
@@ -143,7 +158,7 @@ export async function cancelVault(provider: AnchorProvider, args: CancelVaultArg
       depositorTokenAccount,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
-    .rpc()
+    .transaction()
 }
 
 export async function fetchVault(provider: AnchorProvider, vault: PublicKey): Promise<VaultAccount | null> {

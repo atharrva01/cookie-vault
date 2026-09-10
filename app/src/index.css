@@ -299,3 +299,64 @@ main {
   color: var(--err);
   font-size: 0.85rem;
 }
+.ok {
+  color: var(--ok);
+}
+
+/* Forms */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.field input[type='text'],
+.field input[type='number'],
+.field input[type='date'] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg2);
+  padding: 0.55rem 0.7rem;
+  color: var(--text);
+  width: 100%;
+}
+.field input:focus {
+  outline: 2px solid var(--accent-2);
+  outline-offset: -1px;
+}
+.radio-row {
+  display: flex;
+  gap: 16px;
+}
+.radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.milestone-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.milestone-row input {
+  flex: 1;
+}
+.asset-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+}
+.asset-preview img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}

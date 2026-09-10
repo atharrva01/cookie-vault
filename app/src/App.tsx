@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { WalletProvider } from './components/WalletContext'
 import { WalletButton } from './components/WalletButton'
 import { connection } from './lib/chain'
+import { navigate, useRoute } from './lib/router'
+import CreateVault from './pages/CreateVault'
 
 function useChainUp(): boolean {
   const [up, setUp] = useState(true)
@@ -26,7 +28,14 @@ function Topbar() {
   const up = useChainUp()
   return (
     <header className="topbar">
-      <a href="/" className="brand">
+      <a
+        href="#/"
+        className="brand"
+        onClick={(e) => {
+          e.preventDefault()
+          navigate('/')
+        }}
+      >
         <span aria-hidden>🍪</span> Cookie Vault
       </a>
       <div className="topbar-right">
@@ -48,22 +57,42 @@ function Home() {
           Lock funds once, release them under conditions you define — a full unlock on a date, or
           milestone-by-milestone as work is delivered and approved.
         </p>
+        <button className="primary" onClick={() => navigate('/create')}>
+          Create a vault
+        </button>
       </section>
-      <div className="card">
-        <p className="muted small">
-          Wallet connection and chain status are wired up. Vault creation, claiming, and approval flows land in
-          the next phases.
-        </p>
-      </div>
     </main>
   )
+}
+
+function NotFound() {
+  return (
+    <main>
+      <p>Nothing here.</p>
+      <button className="ghost" onClick={() => navigate('/')}>
+        Back home
+      </button>
+    </main>
+  )
+}
+
+function Routes() {
+  const { path } = useRoute()
+  switch (path) {
+    case '/':
+      return <Home />
+    case '/create':
+      return <CreateVault />
+    default:
+      return <NotFound />
+  }
 }
 
 export default function App() {
   return (
     <WalletProvider>
       <Topbar />
-      <Home />
+      <Routes />
     </WalletProvider>
   )
 }
