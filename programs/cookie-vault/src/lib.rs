@@ -59,4 +59,12 @@ pub mod cookie_vault {
     pub fn approve_milestone(ctx: Context<ApproveMilestone>, milestone_index: u8) -> Result<()> {
         instructions::approve_milestone::handle_approve_milestone(ctx, milestone_index)
     }
+
+    /// Refunds the depositor the full remaining vault balance and marks it
+    /// cancelled. Only allowed before anything has been claimed — once any
+    /// funds are released, the deal is considered in progress and the vault
+    /// can no longer be unwound.
+    pub fn cancel_vault(ctx: Context<CancelVault>) -> Result<()> {
+        instructions::cancel_vault::handle_cancel_vault(ctx)
+    }
 }

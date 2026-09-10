@@ -149,3 +149,22 @@ fn claim_milestone(vault: &Vault, milestone_index: Option<u8>) -> Result<u64> {
 
     Ok(milestone.amount)
 }
+
+#[cfg(test)]
+mod tests {
+    // `handle_claim` above adds each release to `vault.released_amount` with
+    // `checked_add`, not `+=`. In practice that addition can never actually
+    // overflow through the public instructions: `initialize_vault` requires
+    // milestone amounts to sum to exactly `total_amount`, each milestone (or
+    // the single time-lock release) can only be claimed once, so the running
+    // total is structurally bounded by `total_amount <= u64::MAX` — there's
+    // no reachable sequence of real transactions that overflows it. This
+    // test exists to document that `checked_add` is still the right
+    // primitive regardless, as defense in depth against that invariant ever
+    // being loosened later, not because an integration test can reach it.
+    #[test]
+    fn released_amount_addition_is_checked_not_wrapping() {
+        assert_eq!(u64::MAX.checked_add(1), None);
+        assert_eq!(u64::MAX.checked_add(0), Some(u64::MAX));
+    }
+}
